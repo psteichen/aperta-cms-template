@@ -149,7 +149,7 @@ ACTIONS = (
       {         
 	'label'		: 'DISTRICT', 
 	'icon'		: 'building',
-	'desc'		: 'Redirection vers le site du DISTRICT 105.',
+	'desc'		: 'Redirection vers le site du DISTRICT 104.',
 	'url'		: 'https://district105.fifty-one.club/',
 	'has_perms'	: 'cms.MEMBER',
       },

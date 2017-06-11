@@ -1,0 +1,6 @@
+django>=1.11
+Pillow
+django-formtools #1.11 detached formwizard and stuff
+django-tables2
+django-bootstrap3
+django-headcrumbs

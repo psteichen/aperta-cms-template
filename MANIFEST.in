@@ -1,0 +1,6 @@
+include LICENSE
+include README.rst
+recursive-include docs *
+include cms/requirements.txt
+recursive-include cms/static *
+recursive-include cms/templates *

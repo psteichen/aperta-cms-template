@@ -19,7 +19,7 @@ Quick start
 
     cp cms/default_settings.py cms/settings.py
 
-(3. Manually install "headcrumbs" via https://github.com/psteichen/django-headcrumbs (there's no pypi install script yet))
+3. Manually install "headcrumbs" via https://github.com/psteichen/django-headcrumbs (there's no pypi install script yet)
 
 4. Run `python manage.py migrate` to create the models.
 

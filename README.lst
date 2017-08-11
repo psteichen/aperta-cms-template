@@ -11,11 +11,11 @@ Detailed documentation is in the "docs" directory.
 Quick start
 -----------
 
-1. Use as django project template for a fresh install::
+1. Use as django project template for a fresh install:
 
     django-admin startproject --template=https://github.com/psteichen/aperta-cms-template/archive/master.zip mycms
 
-2. Create your own config::
+2. Create your own config:
 
     cp cms/default_settings.py cms/settings.py
 

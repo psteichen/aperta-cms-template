@@ -15,7 +15,7 @@ from django_tables2  import RequestConfig
 from headcrumbs.decorators import crumb
 from headcrumbs.util import name_from_pk
 
-from cms.functions import notify_by_email, show_form, visualiseDateTime
+from cms.functions import notify_by_email, show_form, visualiseDateTime, genIcal
 
 from events.models import Event
 from members.models import Member
@@ -25,7 +25,7 @@ from attendance.models import Meeting_Attendance
 
 from .functions import gen_meeting_overview, gen_meeting_initial, gen_current_attendance, gen_report_message, gen_invitee_message, gen_meeting_listing
 from .models import Meeting, Invitation
-from .forms import  MeetingForm, ListMeetingsForm, MeetingReportForm, InviteeFormSet
+from .forms import  MeetingForm, ModifyMeetingForm, MeetingReportForm, InviteeFormSet
 from .tables  import MeetingTable, MgmtMeetingTable, MeetingMixin, MeetingListingTable
 
 
@@ -56,7 +56,7 @@ def list(r):
 # add #
 #######
 @permission_required('cms.BOARD',raise_exception=True)
-@crumb(u'Réunions statutaires')
+@crumb(u'Ajoute une réunion',parent=list)
 def add(r):
 
   if r.POST:
@@ -76,39 +76,6 @@ def add(r):
       else:
         I = Invitation(meeting=Mt,message=mf.cleaned_data['additional_message'])
       I.save()
-      send = mf.cleaned_data['send']
-      if send:
-        I.sent = timezone.now()
-
-      email_error = { 'ok': True, 'who': [], }
-      for m in get_active_members():
-   
-        gen_attendance_hashes(Mt,Event.MEET,m)
-        invitation_message = gen_invitation_message(e_template,Mt,Event.MEET,m) + mf.cleaned_data['additional_message']
-        if m == user_member: 
-          done_message = invitation_message
-
-        message_content = {
-          'FULLNAME'    : gen_member_fullname(m),
-          'MESSAGE'     : invitation_message,
-        }
-        #send email
-        if send:
-          if I.attachement:
-            ok=notify_by_email(settings.EMAILS['sender']['default'],m.email,e_subject,message_content,False,settings.MEDIA_ROOT + unicode(I.attachement))
-          else:
-            ok=notify_by_email(settings.EMAILS['sender']['default'],m.email,e_subject,message_content)
-          if not ok:
-            email_error['ok']=False
-            email_error['who'].append(m.email)
-
-          # error in email -> show error messages
-          if not email_error['ok']:
-            I.save()
-            return TemplateResponse(r, settings.TEMPLATE_CONTENT['meetings']['add']['done']['template'], {
-                		'title': settings.TEMPLATE_CONTENT['meetings']['add']['done']['title'], 
-                		'error_message': settings.TEMPLATE_CONTENT['error']['email'] + ' ; '.join([e for e in email_error['who']]),
-			 })
 
       # all fine -> done
       I.save()
@@ -123,6 +90,7 @@ def add(r):
                 'title': settings.TEMPLATE_CONTENT['meetings']['add']['done']['title'], 
                 'error_message': settings.TEMPLATE_CONTENT['error']['gen'] + ' ; '.join([e for e in mf.errors]),
                 })
+
   # no post yet -> empty form
   else:
     form = MeetingForm()
@@ -143,6 +111,7 @@ def add(r):
 # send #
 ########
 @permission_required('cms.BOARD',raise_exception=True)
+@crumb(u'Envoie des invitations de la réunion : {meeting}'.format(meeting=name_from_pk(Meeting)),parent=list)
 def send(r, meeting_num):
 
   e_template =  settings.TEMPLATE_CONTENT['meetings']['send']['done']['email']['template']
@@ -161,11 +130,15 @@ def send(r, meeting_num):
         'FULLNAME'    : gen_member_fullname(m),
         'MESSAGE'     : invitation_message + I.message,
     }
+
+    #generate ical invite
+    invite = genIcal(Mt)
+
     #send email
     try: #with attachement
-      ok=notify_by_email(settings.EMAILS['sender']['default'],m.email,subject,message_content,False,settings.MEDIA_ROOT + unicode(I.attachement))
+      ok=notify_by_email(settings.EMAILS['sender']['default'],m.email,subject,message_content,False,[invite,settings.MEDIA_ROOT + unicode(I.attachement)])
     except: #no attachement
-      ok=notify_by_email(settings.EMAILS['sender']['default'],m.email,subject,message_content)
+      ok=notify_by_email(settings.EMAILS['sender']['default'],m.email,subject,message_content,False,invite)
      
     if not ok: 
       email_error['ok']=False
@@ -191,6 +164,7 @@ def send(r, meeting_num):
 # invite #
 ##########
 #@permission_required('cms.MEMBER',raise_exception=True)
+@crumb(u'Inviter un externe à la réunion : {meeting}'.format(meeting=name_from_pk(Meeting)),parent=list)
 def invite(r, meeting_num, member_id):
 
   Mt = M = None
@@ -275,6 +249,7 @@ def invite(r, meeting_num, member_id):
 # details #
 ############
 @login_required
+@crumb(u'Détails de la réunion : {meeting}'.format(meeting=name_from_pk(Meeting)),parent=list)
 def details(r, meeting_num):
 
   meeting = Meeting.objects.get(num=meeting_num)
@@ -290,6 +265,7 @@ def details(r, meeting_num):
 # listing #
 ###########
 @login_required
+@crumb(u'Listing pour la réunion : {meeting}'.format(meeting=name_from_pk(Meeting)),parent=details)
 def listing(r, meeting_num):
 
   meeting = Meeting.objects.get(num=meeting_num)
@@ -304,100 +280,57 @@ def listing(r, meeting_num):
 
 # modify #
 ##########
+@permission_required('cms.BOARD',raise_exception=True)
+@crumb(u'Modifier la réunion : {meeting}'.format(meeting=name_from_pk(Meeting)),parent=list)
+def modify(r,meeting_num):
 
-#modify helper functions
-def show_attendance_form(wizard):
-  return show_form(wizard,'meeting','attendance',True)
+  Mt = Meeting.objects.get(pk=meeting_num)
+  template    = settings.TEMPLATE_CONTENT['meetings']['modify']['template']
+  title       = settings.TEMPLATE_CONTENT['meetings']['modify']['title'].format(meeting=unicode(Mt))
+  desc                = settings.TEMPLATE_CONTENT['meetings']['modify']['desc']
+  submit      = settings.TEMPLATE_CONTENT['meetings']['modify']['submit']
 
-#modify formwizard
-class ModifyMeetingWizard(SessionWizardView):
+  done_template       = settings.TEMPLATE_CONTENT['meetings']['modify']['done']['template']
+  done_title  = settings.TEMPLATE_CONTENT['meetings']['modify']['done']['title'].format(meeting=unicode(Mt))
+  done_message        = settings.TEMPLATE_CONTENT['meetings']['modify']['done']['message'].format(meeting=unicode(Mt))
 
-  def get_template_names(self):
-    return 'wizard.html'
-
-  def get_context_data(self, form, **kwargs):
-    context = super(ModifyMeetingWizard, self).get_context_data(form=form, **kwargs)
-
-    if self.steps.current != None:
-      title = u'réunion'
-      meeting_num = self.kwargs['meeting_num']
-      title = Meeting.objects.get(pk=meeting_num).title
-      context.update({'title': settings.TEMPLATE_CONTENT['meetings']['modify']['title']})
-      context.update({'first': settings.TEMPLATE_CONTENT['meetings']['modify']['first']})
-      context.update({'prev': settings.TEMPLATE_CONTENT['meetings']['modify']['prev']})
-      context.update({'step_title': settings.TEMPLATE_CONTENT['meetings']['modify'][self.steps.current]['title'] % { 'meeting': title, } })
-      context.update({'next': settings.TEMPLATE_CONTENT['meetings']['modify'][self.steps.current]['next']})
-
-    return context
-
-  def get_form(self, step=None, data=None, files=None):
-    form = super(ModifyMeetingWizard, self).get_form(step, data, files)
-
-    # determine the step if not given
-    if step is None:
-      step = self.steps.current
-
-    meeting_num = self.kwargs['meeting_num']
-    M = Meeting.objects.get(pk=meeting_num)
-
-    if step == 'meeting':
-      form.initial = gen_meeting_initial(M)
-      form.instance = M
-
-    if step == 'attendance':
-      form.initial = gen_current_attendance(M)
-
-    return form
-
-  def done(self, form_list, form_dict, **kwargs):
-
-    template = settings.TEMPLATE_CONTENT['meetings']['modify']['done']['template']
-
-    M = None
-    mf = form_dict['meeting']
+  if r.POST:
+    done_message = ''
+    mf = ModifyMeetingForm(r.POST,instance=Mt)
     if mf.is_valid():
-      M = mf.save()
+      Mt = mf.save(commit=False)
+      Mt.save()
 
-      attendance = mf.cleaned_data['attendance']
-      if attendance == True: 
-        af = form_dict['attendance']
-        if af.is_valid() and af.has_changed():
-          s_initial = af.initial['subscribed']
-          s_changed = af.cleaned_data['subscribed']
-          for s in s_changed:
-            try:
-              Meeting_Attendance(meeting=M,member=s,timestamp=datetime.now(),present=True).save()
-            except: pass
-#          s_diff = set(s_initial) ^ set(s_changed)
-#          for s_d in s_diff:
-#            try:
-#              Meeting_Attendance.objects.get(meeting=M,member=s_d).delete()
-#            except:
-#              pass
+      # all fine -> done
+      return render(r, done_template, {
+                'title'		: done_title,
+                'message'     	: done_message,
+                })
 
-          e_initial = af.initial['excused']
-          e_changed = af.cleaned_data['excused']
-          for e in e_changed:
-            try:
-              Meeting_Attendance(meeting=M,member=e,timestamp=datetime.now(),present=False).save()
-            except: pass
-#          e_diff = set(e_initial) ^ set(e_changed)
-#          for e_d in e_diff:
-#            try:
-#              Meeting_Attendance.objects.get(meeting=M,member=e_d).delete()
-#            except:
-#              pass
+    # form not valid -> error
+    else:
+      return render(r, done_template, {
+                'title'		: done_title,
+                'error_message'	: settings.TEMPLATE_CONTENT['error']['gen'] + ' ; '.join([e for e in mf.errors]),
+                })
 
-    title = settings.TEMPLATE_CONTENT['meetings']['modify']['done']['title'] % M
-
-    return TemplateResponse(self.request, template, {
-                        'title': title,
-                 })
+  # no post yet -> empty form
+  else:
+    form = ModifyMeetingForm()
+    form.initial = gen_meeting_initial(Mt)
+    form.instance = Mt
+    return render(r, template, {
+                'title'       	: title,
+                'desc'        	: desc,
+                'submit'	: submit,
+                'form'        	: form,
+                })
 
 
 # report #
 ##########
 @permission_required('cms.BOARD',raise_exception=True)
+@crumb(u'Rapport de réunion : {meeting}'.format(meeting=name_from_pk(Meeting)),parent=list)
 def report(r, meeting_num):
 
   Mt = Meeting.objects.get(num=meeting_num)
@@ -463,6 +396,4 @@ def report(r, meeting_num):
                 'submit': settings.TEMPLATE_CONTENT['meetings']['report']['submit'],
                 'form': form,
                 })
-
-
 

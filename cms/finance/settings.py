@@ -4,10 +4,46 @@
 ACTIONS = {
   'main' : (
     {
-      'label'		: u'Extraits bancaires',
+      'has_perms'     : 'cms.MEMBER',
+      'heading'               : u'Bilan',
+      'actions' : (
+        {
+          'label'     : u'Comptes annuels',
+                'desc'        : u"Les bilans financiers et les comptes des pertes et profits, tels qu'établient pour clôturer les périodes d'activitiées annuelles.",
+          'icon'      : 'balance-scale',
+          'url'         : '/finance/balance/',
+          'has_perms' : 'cms.MEMBER',
+        },
+      ),
+    },
+    {
+      'heading'               : u'Banque',
+      'actions' : (
+        {
+          'label'     : u'Extraits bancaires',
+                'desc'        : u"Extraits et documents bancaires correspondant au compte de l'association.",
+          'icon'      : 'bank',
+          'url'         : '/finance/bank/',
+          'has_perms' : 'cms.BOARD',
+        },
+      ),
+    },
+  ),
+  'balance' : (
+    {
+      'label'         	: u'Télécharger les Comptes annuels',
+      'icon'          	: 'balance-scale',
+      'grade'     	: 'danger',
+      'url'		: '/finance/upload/balance/',
+      'has_perms'	: 'cms.BOARD',
+    },
+  ),
+  'bank' : (
+    {
+      'label'		: u'Nouvel Extrait',
       'icon'     	: 'bank',
-      'grade'     	: 'info',
-      'url'           	: '/finance/bank/',
+      'grade'     	: 'danger',
+      'url'           	: '/finance/bank/upload/bank/',
       'has_perms'	: 'cms.BOARD',
     },
   ),
@@ -29,20 +65,11 @@ ACTIONS = {
       'has_perms'	: 'cms.BOARD',
     },
   ),
-  'bank' : (
-    {
-      'label'		: u'Nouvel Extrait',
-      'icon'     	: 'bank',
-      'grade'     	: 'danger',
-      'url'           	: '/finance/bank/upload/',
-      'has_perms'	: 'cms.BOARD',
-    },
-  ),
 }
 
 FINANCE_TMPL_CONTENT = {
   'title'       	: u'Trésorerie',
-  'template'  		: 'list.html',
+  'template'  		: 'actions.html',
   'actions'     	: ACTIONS['main'],
   'invoice': {
     'template'		: 'list.html',
@@ -71,15 +98,21 @@ FINANCE_TMPL_CONTENT = {
     'title'     	: u'Extraits bancaires',
     'actions'     	: ACTIONS['bank'],
     'desc'     		: u'',
-    'upload': {
-      'template'	: 'form.html',
-      'title'     	: u'Nouvel Extrait',
-      'desc'   		: u'',
-      'submit'  	: u'Soumettre',
-      'done': {
-        'template'	: 'done.html',
-        'url'     	: '/finance/bank/',
-      },
+  },
+  'balance': {
+    'template'          : 'list.html',
+    'title'           	: u'Comptes annuels',
+    'actions'         	: ACTIONS['balance'],
+    'desc'              : u'',
+  },
+  'upload': {
+    'template'          : 'form.html',
+    'title'           	: u'Télécharger {name}',
+    'desc'            	: u'',
+    'submit'          	: u'Soumettre',
+    'done': {
+      'template'      	: 'done.html',
+      'url'           	: '/finance/{type}/',
     },
   },
 }

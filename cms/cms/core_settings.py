@@ -26,9 +26,9 @@ INSTALLED_APPS = [
     'bootstrap3',
     'formtools',
     'django_tables2',
-#    'headcrumbs',
   # project apps
     'members.apps.MembersConfig',
+    'setup.apps.SetupConfig',
     'upload.apps.UploadConfig',
     'locations.apps.LocationsConfig',
     'meetings.apps.MeetingsConfig',
@@ -42,11 +42,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-#    'django.contrib.sites', #needed by breadcrumbs
-#    'django.contrib.flatpages', #needed by breadcrumbs
 ]
 
-#SITE_ID = 1
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -57,7 +54,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'headcrumbs.middleware.CrumbsMiddleware',
-#    'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware', #needed by breadcrumbs
 ]
 
 ROOT_URLCONF = 'cms.urls'

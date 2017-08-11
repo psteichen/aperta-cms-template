@@ -4,17 +4,17 @@ from .core_settings import *
 
 ######################
 ## (LOCAL) SETTINGS ##
-##     DEFAULTS     ##
 ######################
 
-SECRET_KEY = '4j$om7#%h7ahryh!lht(mlf!c*vm%5zcz4sf+5xc#ki)ij(v=&'
+SECRET_KEY = '[GENERATE SECRET KEY]'
 DEBUG = True
 
-ALLOWED_HOSTS = [ 'cms.aperta.lu', ]
+DOMAIN = 'example.org'
+ALLOWED_HOSTS = [ 'your-host.'+DOMAIN, ]
 
 # Email settings
-SERVER_EMAIL = 'admin@aperta.lu'
-DEFAULT_FROM_EMAIL = 'board@aperta.lu'
+SERVER_EMAIL = 'admin@'+DOMAIN
+DEFAULT_FROM_EMAIL = 'board@'+DOMAIN
 
 ADMINS = (
   ('Admin', SERVER_EMAIL),
@@ -23,7 +23,7 @@ MANAGERS = ADMINS
 
 EMAILS = {
   'sender' : {
-    'default'	: "'FIFTY-ONE Aperta' <board@aperta.lu>",
+    'default'	: '"FIFTY-ONE Aperta" <board@'+DOMAIN+'>',
   },
   'footer' 	: '''Amicalement,
 Le comité APERTA
@@ -39,7 +39,7 @@ TEMPLATE_CONTENT = {
     'title'             : 'Club Management System',
     'logo' : {
       'title'		: 'FIFTY-ONE<br/><strong><em>APERTA</em></strong>',
-      'img'		: 'https://aperta.lu/pics/logo-51-aperta_picto.png',
+      'img'		: 'https://'+DOMAIN+'/pics/logo-51-aperta_picto.png',
       'url'             : '/',
     },
     'description'       : '',
@@ -74,6 +74,7 @@ TEMPLATE_CONTENT = {
     },
     'gen'               : u'Error dans la saisie!',
     'email'             : u'Error dans l\'envoi d\'e-mail!',
+    'import'            : u'Error dans l\'import!',
     'no-data'           : u'Pas de données!',
     'duplicate'         : u'Doublon, vérifiez votre saisie!',
   },
@@ -103,6 +104,8 @@ ACTIONS = (
   {
     'has_perms' 	: 'cms.MEMBER',
     'heading' 		: 'Association',
+    'grade' 		: 'success',
+    'icon' 		: 'users',
     'actions' : (
       {         
         'label'         : u'Réunions Statutaires', 
@@ -122,8 +125,8 @@ ACTIONS = (
         'label'         : u'Trésorerie', 
         'icon'     	: 'euro',
         'desc'          : 'Gérer les comptes et autres aspects financiers.',
-        'url'           : '/finance/bank/',
-   	'has_perms' 	: 'cms.BOARD',
+        'url'           : '/finance/',
+   	'has_perms' 	: 'cms.MEMBER',
      },
 
     ),
@@ -131,6 +134,8 @@ ACTIONS = (
   {
     'has_perms' 	: 'cms.MEMBER',
     'heading' 		: 'Activités',
+    'grade' 		: 'info',
+    'icon' 		: 'globe',
     'actions'   : (
       { 
         'label'         : 'Évènements', 
@@ -149,8 +154,8 @@ ACTIONS = (
       {         
 	'label'		: 'DISTRICT', 
 	'icon'		: 'building',
-	'desc'		: 'Redirection vers le site du DISTRICT 105.',
-	'url'		: 'https://district105.fifty-one.club/',
+	'desc'		: 'Redirection vers le site du DISTRICT 104.',
+	'url'		: 'https://d104.fifty-one.club/',
 	'has_perms'	: 'cms.MEMBER',
       },
     ),
@@ -162,10 +167,13 @@ TEMPLATE_CONTENT['home'] = {
   'actions'     : ACTIONS,
 }
 
+#setup
+from setup.settings import *
+TEMPLATE_CONTENT['setup'] = SETUP_TMPL_CONTENT
+
 #members
 from members.settings import *
 TEMPLATE_CONTENT['members'] = MEMBERS_TMPL_CONTENT
-
 
 #attendance
 from attendance.settings import *
@@ -190,7 +198,7 @@ EVENTS_ATTENDANCE_URL = ATTENDANCE_BASE_URL + 'events/'
 from finance.settings import *
 TEMPLATE_CONTENT['finance'] = FINANCE_TMPL_CONTENT
 
-#web
-#from web.settings import *
-#TEMPLATE_CONTENT['web'] = WEB_TMPL_CONTENT
+#upload
+from upload.settings import *
+TEMPLATE_CONTENT['upload'] = UPLOAD_TMPL_CONTENT
 

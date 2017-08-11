@@ -25,9 +25,14 @@ def gen_member_initial(m):
   initial_data['first_name'] = m.first_name
   initial_data['last_name'] = m.last_name
   initial_data['email'] = m.email
+  initial_data['address'] = m.address
+  initial_data['prefix'] = m.prefix
+  initial_data['phone'] = m.phone
+  initial_data['mobile'] = m.mobile
   initial_data['start_date'] = m.start_date
   initial_data['end_date'] = m.end_date
   initial_data['status'] = m.status
+
   try:
     role = Role.objects.get(member__pk=m.pk)
     if role.end_date:
@@ -42,11 +47,9 @@ def gen_member_initial(m):
 def gen_role_initial(r):
   initial_data = {}
 
-  initial_data['title'] = r.title
-  initial_data['desc'] = r.desc
+  initial_data['title'] = r.type
+  initial_data['desc'] = r.year
   initial_data['member'] = r.member
-  initial_data['start_date'] = r.start_date
-  initial_data['end_date'] = r.end_date
 
   return initial_data
 

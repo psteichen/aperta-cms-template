@@ -6,10 +6,10 @@
   {% for part in actions %}
   {% if part.has_perms in perms or not part.has_perms %}
   <div class="col-sm-6">
-    <div class="panel panel-primary">
+    <div class="panel panel-primary {% if part.grade %}panel-{{ part.grade }}{% endif %}">
      {% if part.heading %}
       <div class="panel-heading">
-       <h3 class="panel-title">{{ part.heading|safe }}</h3>
+       <h3 class="panel-title text-center">{% if part.icon %}<i class="fa fa-{{ part.icon }}"></i>&nbsp;&nbsp;{% endif %}{{ part.heading|safe }}{% if part.icon %}&nbsp;&nbsp;<i class="fa fa-{{ part.icon }}"></i>{% endif %}</h3>
       </div>
      {% endif %}
       <div class="panel-body">

@@ -33,7 +33,7 @@ from .tables  import EventTable
 # list #
 ########
 @login_required
-@crumb(u'Evènements')
+@crumb(u'Évènements')
 def list(r):
 
   table = EventTable(Event.objects.all().order_by('-id'))
@@ -50,6 +50,7 @@ def list(r):
 # add #
 #######
 @permission_required('cms.COMM',raise_exception=True)
+@crumb(u'Ajouter un évènement',parent=list)
 def add(r):
 
   if r.POST:
@@ -172,6 +173,7 @@ def send(r,event_id):
 # details #
 ###########
 @login_required
+@crumb(u"Détail d'un évènement",parent=list)
 def details(r, event_id):
 
   event = Event.objects.get(pk=event_id)

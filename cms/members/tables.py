@@ -10,6 +10,8 @@ from django_tables2.utils import A
 from django.utils.safestring import mark_safe
 from django.utils.html import escape
 
+from cms.functions import getSaison
+
 from attendance.models import Meeting_Attendance
 
 from .models import Member, Role
@@ -17,7 +19,7 @@ from .models import Member, Role
 #table for visualisation via django_tables2
 class MemberTable(Table):
   role		= Column(verbose_name=u'Rôle',empty_values=())
-  meetings	= Column(verbose_name=u'RS (présent / excusé)',empty_values=())
+  meetings    = Column(verbose_name=u'Réunions statutaires<br/>(présent / excusé)',empty_values=())
 
   def __init__(self, *args, **kwargs):
     if kwargs["username"]:
@@ -51,12 +53,8 @@ class MemberTable(Table):
 
   def render_role(self, value, record):
     try:
-      role = Role.objects.get(member__id=record.id)
-      if role.end_date:
-        return unicode(role.title) + ' (' + unicode(role.start_date) + ' - ' + unicode(role.end_date) +')'
-      else:
-        return unicode(role.title) + ' (depuis ' + unicode(role.start_date) + ')'
-    except:
+      return unicode(role.type.title) + ' (' + unicode(role.year) + ')'
+    except Role.DoesNotExist:
       return ''
 
   def render_meetings(self, record):
@@ -76,8 +74,8 @@ class MemberTable(Table):
 #management table
 class MgmtMemberTable(Table):
   row_class     = Column(visible=False, empty_values=()) #used to highlight some rows
-  role		= Column(verbose_name=u'Rôle',empty_values=())
-  meetings	= Column(verbose_name=u'RS (présent / excusé)',empty_values=())
+  role                = Column(verbose_name=u'Rôle(s) ['+getSaison()+'] ',empty_values=())
+  meetings    = Column(verbose_name=u'Réunions statutaires<br/>(présent / excusé)',empty_values=())
   modify	= Column(verbose_name=u'Modifier',empty_values=())
 
   def render_row_class(self, value, record):
@@ -97,6 +95,17 @@ class MgmtMemberTable(Table):
     return cl
 
   def render_photo(self, value, record):
+    role = ''
+    try:
+      R = Role.objects.get(member__id=record.id)
+      if R.end_date:
+        role = unicode(R.title) + ' (' + unicode(R.start_date) + ' - ' + unicode(R.end_date) +')'
+      else:
+        role = unicode(R.title) + ' (depuis ' + unicode(R.start_date) + ')'
+    except:
+      pass
+
+
     picture = u'''<i class="fa-stack fa-3x"><a href="#{id}Modal" data-toggle="modal"><img src="{pic}" alt="Photo" class="img-responsive img-circle" /></a></i>
 
 <!-- Modal -->
@@ -109,11 +118,20 @@ class MgmtMemberTable(Table):
       </div> 
       <div class="modal-body">
         <center><img src="{pic}" alt="Photo" class="img-responsive img-rounded" /></center>
+        <div class="panel">
+          <div class="btn btn-info pull-right">Statut: {status}</div>
+          <div class="panel-body">
+            <strong>Adresse :</strong> <p>{address}</p>
+            <strong>Tél. fixe :</strong> <p>{phone}</p>
+            <strong>Mobile :</strong> <p>{mobile}</p>
+            <em>Rôle : <p>{role}</p></em>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </div>
-'''.format(id=record.pk,name=unicode(record),pic=settings.MEDIA_URL+unicode(value))
+'''.format(id=record.pk,name=unicode(record),pic=settings.MEDIA_URL+unicode(value),status=Member.STATUSES[record.status][1],address=unicode(record.address),phone=unicode(record.phone),mobile=unicode(record.mobile),role=role)
 
     return mark_safe(picture)
 
@@ -127,13 +145,14 @@ class MgmtMemberTable(Table):
 #    return format_datetime(value)
 
   def render_role(self, value, record):
+    roles = u''
     try:
-      role = Role.objects.get(member__id=record.id)
-      if role.end_date:
-        return unicode(role.title) + ' (' + unicode(role.start_date) + ' - ' + unicode(role.end_date) +')'
-      else:
-        return unicode(role.title) + ' (depuis ' + unicode(role.start_date) + ')'
-    except:
+      R = Role.objects.filter(member__id=record.id,year=getSaison())
+      for r in R:
+        roles += unicode(r.type.title)
+        if r != R.last(): roles += u' ; '
+      return roles
+    except Role.DoesNotExist:
       return ''
 
   def render_meetings(self, record):
@@ -147,5 +166,19 @@ class MgmtMemberTable(Table):
 
   class Meta:
     model = Member
-    fields = ( 'photo', 'first_name', 'last_name', 'email', 'start_date', 'end_date', 'status', 'role', 'meetings', )
+    fields = ( 'photo', 'first_name', 'last_name', 'address', 'email', 'mobile', 'status', 'role', 'meetings', )
     attrs = {"class": "table table-striped"}
+
+#roles table
+class RoleTable(Table):
+  modify      = Column(verbose_name=u'Modifier',empty_values=())
+
+  def render_modify(self, record):
+    link = '<a class="btn btn-danger btn-sm" href="/members/roles/modify/{}/"><i class="fa fa-pencil"></i></a>'.format(escape(record.pk))
+    return mark_safe(link)
+
+  class Meta:
+    model = Role
+    fields = ( 'year', 'type', 'member', )
+    attrs = {"class": "table table-striped"}
+

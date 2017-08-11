@@ -43,6 +43,7 @@ def list(r):
 # add #
 #######
 @permission_required('cms.COMM',raise_exception=True)
+@crumb(u'Ajouter un lieux',parent=list)
 def add(r):
 
   if r.POST:

@@ -1,6 +1,11 @@
+#
+# coding=utf-8
+#
+
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.template.response import TemplateResponse
+from django.shortcuts import redirect
 from django.contrib.auth.hashers import make_password
 from django.core.files.storage import FileSystemStorage
 from django.contrib.auth.decorators import login_required, permission_required
@@ -12,7 +17,7 @@ from django_tables2  import RequestConfig
 from headcrumbs.decorators import crumb
 from headcrumbs.util import name_from_pk
 
-from cms.functions import show_form
+from cms.functions import show_form, getSaison
 
 from meetings.models import Meeting
 from events.models import Event
@@ -20,14 +25,14 @@ from attendance.functions import gen_attendance_hashes
 
 from .functions import gen_member_initial, gen_role_initial, gen_member_overview, gen_member_fullname, gen_username, gen_random_password
 from .models import Member, Role
-from .forms import MemberForm, RoleForm
-from .tables  import MemberTable, MgmtMemberTable
+from .forms import MemberForm, RoleForm, RoleTypeForm
+from .tables  import MemberTable, MgmtMemberTable, RoleTable
 
 
 # list #
 #########
 @permission_required('cms.MEMBER')
-@crumb(name_from_pk(Member))
+@crumb(u'Membres')
 def list(request):
 
   table = MemberTable(Member.objects.all().order_by('status', 'last_name'),request,username=request.user.username)
@@ -46,7 +51,7 @@ def list(request):
 # add #
 #######
 @permission_required('cms.BOARD')
-@crumb(u'add a member', parent=list)
+@crumb(u'Ajouter un membre', parent=list)
 def add(r):
 
   if r.POST:
@@ -89,98 +94,64 @@ def add(r):
 
 # modify #
 ##########
+@permission_required('cms.BOARD')
+@crumb(u'Modifier le membre [{member}]'.format(member=name_from_pk(Member)),parent=list)
+def modify(r,mem_id):
 
-#modify helper functions
-def show_mod_role_form(wizard):
-  return show_form(wizard,'member','mod_role',True)
-def show_add_role_form(wizard):
-  return show_form(wizard,'member','add_role',True)
-
-#modify formwizard
-class ModifyMemberWizard(SessionWizardView):
-
-  file_storage = FileSystemStorage()
-
-  def get_template_names(self):
-    return 'wizard.html'
-
-  def get_context_data(self, form, **kwargs):
-    context = super(ModifyMemberWizard, self).get_context_data(form=form, **kwargs)
-
-    if self.steps.current != None:
-      context.update({'first': settings.TEMPLATE_CONTENT['members']['modify']['first']})
-      context.update({'prev': settings.TEMPLATE_CONTENT['members']['modify']['prev']})
-      context.update({'step_title': settings.TEMPLATE_CONTENT['members']['modify'][self.steps.current]['title']})
-      context.update({'next': settings.TEMPLATE_CONTENT['members']['modify'][self.steps.current]['next']})
-
-    return context
-
-  def get_form(self, step=None, data=None, files=None):
-    form = super(ModifyMemberWizard, self).get_form(step, data, files)
-
-    # determine the step if not given
-    if step is None:
-      step = self.steps.current
-
-    M = Member.objects.get(pk=self.kwargs['mem_id'])
-
-    if step == 'member':
-      form.initial = gen_member_initial(M)
-      form.instance = Member.objects.get(pk=M.pk)
-      try:
-        role = Role.objects.get(member__pk=M.pk)
-        del form.fields['add_role']
-      except:
-        del form.fields['role']
-        del form.fields['mod_role']
-
-    if step == 'mod_role':
-      role = Role.objects.get(member=M.pk)
-      form.initial = gen_role_initial(role)
-      form.instance = role
-
-    return form
-
-  @crumb(u'Members')
-  def done(self, fl, form_dict, **kwargs):
-
-    template = settings.TEMPLATE_CONTENT['members']['modify']['done']['template']
-
-    M = R = mrf = arf = None
-    mf = form_dict['member']
-    try:
-      mrf = form_dict['mod_role']
-    except: pass
-    try:
-      arf = form_dict['add_role']
-    except: pass
-
+  M = Member.objects.get(pk=mem_id)
+  if r.POST:
+    mf = MemberForm(r.POST,r.FILES,instance=M)
     if mf.is_valid():
       M = mf.save()
 
-    if mrf: 
-      if mrf.is_valid():
-        R = mrf.save()
-    if arf: 
-      if arf.is_valid():
-        R = arf.save(commit=False)
-        R.member = M
-        R.save()
+      # all fine -> done
+      return TemplateResponse(r, settings.TEMPLATE_CONTENT['members']['modify']['done']['template'], {
+                'title': settings.TEMPLATE_CONTENT['members']['modify']['done']['title'].format(unicode(M)),
+                })
 
-    title = settings.TEMPLATE_CONTENT['members']['modify']['done']['title'] % M
+    # form not valid -> error
+    else:
+      return TemplateResponse(r, settings.TEMPLATE_CONTENT['members']['modify']['done']['template'], {
+                'title': settings.TEMPLATE_CONTENT['members']['modify']['done']['title'],
+                'error_message': settings.TEMPLATE_CONTENT['error']['gen'] + ' ; '.join([e for e in mf.errors]),
+                })
+  # no post yet -> empty form
+  else:
+    form = MemberForm()
+    form.initial = gen_member_initial(M)
+    form.instance = M
+    return TemplateResponse(r, settings.TEMPLATE_CONTENT['members']['modify']['template'], {
+                'title': settings.TEMPLATE_CONTENT['members']['modify']['title'],
+                'desc': settings.TEMPLATE_CONTENT['members']['modify']['desc'],
+                'submit': settings.TEMPLATE_CONTENT['members']['modify']['submit'],
+                'form': form,
+                })
 
-    return TemplateResponse(self.request, template, {
-				'title': title,
-                 })
 
-# role_add #
-############
+# roles #
+#########
 @permission_required('cms.BOARD')
-@crumb(u'add a role', parent=list)
-def role_add(r):
+@crumb(u"Rôles")
+def roles(request):
 
+  table = RoleTable(Role.objects.all().order_by('year', 'type'))
+  RequestConfig(request, paginate={"per_page": 75}).configure(table)
+  return TemplateResponse(request, settings.TEMPLATE_CONTENT['members']['roles']['template'], {
+                        'title': settings.TEMPLATE_CONTENT['members']['roles']['title'],
+                        'actions': settings.TEMPLATE_CONTENT['members']['roles']['actions'],
+                        'table': table,
+                        })
+
+
+# roles  modify #
+#################
+@permission_required('cms.BOARD')
+@crumb(u'Modifier le rôle [{role}]'.format(role=name_from_pk(Role)), parent=roles)
+def r_modify(r,role_id):
+
+  R = Role.objects.get(pk=role_id)
   if r.POST:
-    rf = RoleForm(r.POST)
+    rf = RoleForm(r.POST,instane=R)
     if rf.is_valid():
       Rl = rf.save()
       
@@ -200,6 +171,8 @@ def role_add(r):
   # no post yet -> empty form
   else:
     form = RoleForm()
+    form.initial = gen_role_initial(R)
+    form.instance = R
     return TemplateResponse(r, settings.TEMPLATE_CONTENT['members']['role']['add']['template'], {
                 'title': settings.TEMPLATE_CONTENT['members']['role']['add']['title'],
                 'desc': settings.TEMPLATE_CONTENT['members']['role']['add']['desc'],
@@ -207,14 +180,85 @@ def role_add(r):
                 'form': form,
                 })
 
+# roles  add #
+##############
+@permission_required('cms.BOARD')
+@crumb(u'Ajouter un rôle', parent=roles)
+def r_add(r):
+
+  if r.POST:
+    rf = RoleForm(r.POST)
+    if rf.is_valid():
+      R = rf.save()
+
+      # all fine -> done
+      return TemplateResponse(r, settings.TEMPLATE_CONTENT['members']['roles']['add']['done']['template'], {
+                'title': settings.TEMPLATE_CONTENT['members']['roles']['add']['done']['title'],
+                })
+
+    # form not valid -> error
+    else:
+      return TemplateResponse(r, settings.TEMPLATE_CONTENT['members']['roles']['add']['done']['template'], {
+                'title': settings.TEMPLATE_CONTENT['members']['roles']['add']['done']['title'],
+                'error_message': settings.TEMPLATE_CONTENT['error']['gen'] + ' ; '.join([e for e in rf.errors]),
+                })
+
+  # no post yet -> empty form
+  else:
+    form = RoleForm(initial = { 'year'        : getSaison(), })
+    return TemplateResponse(r, settings.TEMPLATE_CONTENT['members']['roles']['add']['template'], {
+                'title': settings.TEMPLATE_CONTENT['members']['roles']['add']['title'],
+                'desc': settings.TEMPLATE_CONTENT['members']['roles']['add']['desc'],
+                'submit': settings.TEMPLATE_CONTENT['members']['roles']['add']['submit'],
+                'form': form,
+                })
+
+# roles  type #
+#################
+@permission_required('cms.BOARD')
+@crumb(u'Créer un type de rôle', parent=roles)
+def r_type(r):
+
+  if r.POST:
+    rtf = RoleTypeForm(r.POST)
+    if rtf.is_valid():
+      Rt = rtf.save()
+
+      # all fine -> done
+      return TemplateResponse(r, settings.TEMPLATE_CONTENT['members']['roles']['type']['done']['template'], {
+                'title': settings.TEMPLATE_CONTENT['members']['roles']['type']['done']['title'],
+                })
+
+    # form not valid -> error
+    else:
+      return TemplateResponse(r, settings.TEMPLATE_CONTENT['members']['roles']['type']['done']['template'], {
+                'title': settings.TEMPLATE_CONTENT['members']['roles']['type']['done']['title'],
+                'error_message': settings.TEMPLATE_CONTENT['error']['gen'] + ' ; '.join([e for e in rtf.errors]),
+                })
+
+  # no post yet -> empty form
+  else:
+    form = RoleTypeForm()
+    return TemplateResponse(r, settings.TEMPLATE_CONTENT['members']['roles']['type']['template'], {
+                'title': settings.TEMPLATE_CONTENT['members']['roles']['type']['title'],
+                'desc': settings.TEMPLATE_CONTENT['members']['roles']['type']['desc'],
+                'submit': settings.TEMPLATE_CONTENT['members']['roles']['type']['submit'],
+                'form': form,
+                })
+
 
 # profile #
 ###########
 @login_required
-@crumb(name_from_pk(User), parent=list)
+@crumb(u'Profile utilisateur: {user}'.format(user=name_from_pk(User)))
 def profile(r, username):
 
-  member 	= Member.objects.get(user=r.user)
+  try:
+    member 	= Member.objects.get(user=r.user)
+  except Member.DoesNotExist:
+    # non-member user, probably an admin -> redirect to admin console
+    return redirect('/admin/')
+    
   title 	= settings.TEMPLATE_CONTENT['members']['profile']['title'] % { 'name' : gen_member_fullname(member), }
   actions 	= settings.TEMPLATE_CONTENT['members']['profile']['actions']
   for a in actions:
@@ -229,11 +273,11 @@ def profile(r, username):
                 })
 
 
-# modify profile #
+# profile modify #
 ##################
 @login_required
 @crumb(name_from_pk(User), parent=list)
-def mod_profile(r, username):
+def p_modify(r, username):
 
   M = Member.objects.get(user=r.user)
 

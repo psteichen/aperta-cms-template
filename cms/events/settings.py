@@ -4,6 +4,13 @@
 ACTIONS = {
   'main': (
     {
+      'label'         	: u'Importer le Calendrier des évènements',
+      'icon'		: 'upload',
+      'grade'	        : 'danger',
+      'url'		: '/upload/calendar/',
+      'has_perms'     	: 'cms.BOARD',
+    },
+    {
       'label'           : u'Ajouter un évènement',
       'icon'            : 'plus',
       'grade'           : 'danger',
@@ -13,7 +20,7 @@ ACTIONS = {
     {
       'label'           : u'Gestion des Lieux de Rencontre',
       'icon'            : 'home',
-      'grade'           : 'info',
+      'grade'           : 'warning',
       'url'             : '/locations/',
       'has_perms'       : 'cms.COMM',
     },

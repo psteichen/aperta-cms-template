@@ -11,11 +11,11 @@ Detailed documentation is in the "docs" directory.
 Quick start
 -----------
 
-1. Use as django project template for a fresh install::
+1. Use as django project template for a fresh install:
 
     django-admin startproject --template=https://github.com/psteichen/aperta-cms-template/archive/master.zip mycms
 
-2. Create your own config::
+2. Create your own config:
 
     cp cms/default_settings.py cms/settings.py
 
@@ -23,7 +23,9 @@ Quick start
 
 4. Run `python manage.py migrate` to create the models.
 
-4. Start the development server and visit http://127.0.0.1:8000/
+5. Run `python manage.py createsuperuser` to get a superuser
+
+6. Start the development server and visit http://127.0.0.1:8000/
    to import data for the different apps (see "docs" for full details).
 
-(5. Deploy django app on your webserver, for a good start see: https://docs.djangoproject.com/en/1.11/howto/deployment/wsgi/)
+(7. Deploy django app on your webserver, for a good start see: https://docs.djangoproject.com/en/1.11/howto/deployment/wsgi/)

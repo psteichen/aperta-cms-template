@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'bootstrap3',
     'formtools',
     'django_tables2',
+#    'headcrumbs',
   # project apps
     'members.apps.MembersConfig',
     'setup.apps.SetupConfig',
@@ -42,8 +43,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites', #used by setup
+#    'django.contrib.flatpages', #needed by breadcrumbs
 ]
 
+SITE_ID = 1
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -53,6 +57,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+#    'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware', #needed by breadcrumbs
     'headcrumbs.middleware.CrumbsMiddleware',
 ]
 
@@ -76,6 +81,7 @@ TEMPLATES = [
                 'django.template.context_processors.tz',
                 'django.contrib.messages.context_processors.messages',
   		'cms.context_processors.template_content', #for own templating system
+  		'cms.context_processors.group_perms', #for own perms system (based on groups)
             ],
         },
     },
@@ -157,6 +163,7 @@ LOGGING = {
     }
 }
 
-#login/auth (used by the login_required decorator)
+#login/auth (used by the auth decorators)
 LOGIN_URL="/login/"
 LOGIN_REDIRECT_URL="/"
+LOGOUT_REDIRECT_URL="/login/"

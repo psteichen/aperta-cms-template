@@ -1,39 +1,20 @@
 # Application settings for setup app
 # coding=utf-8
 
-ACTIONS = {
-  'main' : (
-    {
-      'label'		: u'Extraits bancaires',
-      'icon'     	: 'bank',
-      'grade'     	: 'info',
-      'url'           	: '/finance/bank/',
-      'has_perms'	: 'cms.BOARD',
-    },
-  ),
-  'invoice' : (
-    {
-      'label'		: u'Nouvelle Facture',
-      'icon'     	: 'euro',
-      'grade'     	: 'danger',
-      'url'           	: '/finance/invoice/add/',
-      'has_perms'	: 'cms.BOARD',
-    },
-  ),
-}
-
 SETUP_TMPL_CONTENT = {
-  'title'       	: u"Configuration de l'environnement",
+  'title'       	: u"Configuration système",
   'template'  		: 'list.html',
-#  'actions'     	: ACTIONS['main'],
   'init': {
     'template'		: 'form.html',
     'title'       	: u"Configuration initiale",
     'desc'     		: u'',
     'submit'  		: u'Soumettre',
     'done': {
-        'template'	: 'done.html',
-        'url'     	: '/',
+      'title'       	: u"Prochaines étapes",
+      'template'	: 'done.html',
+      'message'     	: u'''
+<a class="btn btn-lg btn-danger" href="/upload/members/" role="button"><i class="fa fa-users"></i>&nbsp;&nbsp;Importer la liste des membres</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a class="btn btn-lg btn-danger" href="/upload/calendar/" role="button"><i class="fa fa-calendar"></i>&nbsp;&nbsp;Importer le calendrier des réunions et évènements</a>
+</div>'''
     },
   },
 }

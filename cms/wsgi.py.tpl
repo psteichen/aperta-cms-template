@@ -11,8 +11,8 @@ import os, sys
 
 # set sys.path to the directory containing the django app
 # else wsgi will not find the settings file below
-sys.path.append('/var/www/aperta.lu/django')
-sys.path.append('/var/www/aperta.lu/django/cms-lts')
+sys.path.append('[FULL PATH OF DJANGO PROJECT CONTAINING FOLDER (one up)]')
+sys.path.append('[FULL PATH OF DJANGO PROJECT]')
 
 from django.core.wsgi import get_wsgi_application
 

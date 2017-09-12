@@ -8,21 +8,21 @@ ACTIONS = {
       'icon'     	: 'plus',
       'grade'     	: 'danger',
       'url'           	: '/meetings/add/',
-      'has_perms'     	: 'cms.BOARD',
+      'has_perms'     	: 'BOARD',
     },
     {
       'label'         	: u'Importer le Calendrier des réunions',
       'icon'          	: 'upload',
-      'grade'         	: 'danger',
+      'grade'         	: 'warning',
       'url'             : '/upload/calendar/',
-      'has_perms'     	: 'cms.BOARD',
+      'has_perms'     	: 'BOARD',
     },
     { 
       'label'         	: u'Gestion des Lieux de Rencontre', 
       'icon'     	: 'home',
-      'grade'     	: 'warning',
+      'grade'     	: 'info',
       'url'           	: '/locations/', 
-      'has_perms'     	: 'cms.COMM',
+      'has_perms'     	: 'BOARD',
     },
   ),
 }
@@ -44,22 +44,20 @@ MEETINGS_TMPL_CONTENT = {
     'submit'   		: u'Ajouter',
     'done': {
       'template'	: 'done.html',
-      'title'     	: u'Nouvelle Réunion Statutaire créée',
+      'title'     	: u'Nouvelle Réunion Statutaire créée :',
       'message'     	: u'''
-<pre>
-Message d'invitation: 
---------------------------------------
-%(email)s
---------------------------------------
-
-Destinataires: 
-%(list)s
-</pre>
+<div class="well">
+<h3>Titre : {meeting.title}</h3>
+<h4>Date : {meeting.when}</h4>
+<h4>Lieu : {meeting.location}</h4>
+<h4>Information(s) supplémentaire(s) :</h4>
+<p>{invite.message}</p>
+<p><a href="/media/{invite.attachement}" target="_blank">Voire les annexes</a></p>
+<hr />
+<h5>Les invité(e)s :</h5>
+<ul>{list}</ul>
+</div>
 ''',
-      'email': {
-	'template'	: 'meeting_invitation.txt',
-	'subject'	: u'[51 aperta] %(title)s',
-      },
     },
   },
   'send': {

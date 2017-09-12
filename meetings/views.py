@@ -4,7 +4,6 @@
 from datetime import date, timedelta, datetime
 
 from django.template.response import TemplateResponse
-from django.contrib.auth.decorators import login_required, permission_required
 from django.conf import settings
 from django.utils import timezone
 
@@ -15,11 +14,11 @@ from django_tables2  import RequestConfig
 from headcrumbs.decorators import crumb
 from headcrumbs.util import name_from_pk
 
-from cms.functions import notify_by_email, show_form, visualiseDateTime, genIcal
+from cms.functions import notify_by_email, show_form, visualiseDateTime, genIcal, group_required
 
 from events.models import Event
 from members.models import Member
-from members.functions import get_active_members, gen_member_fullname
+from members.functions import get_active_members, gen_member_fullname, is_board
 from attendance.functions import gen_attendance_hashes, gen_invitation_message
 from attendance.models import Meeting_Attendance
 
@@ -35,12 +34,12 @@ from .tables  import MeetingTable, MgmtMeetingTable, MeetingMixin, MeetingListin
 
 # list #
 ########
-@permission_required('cms.MEMBER',raise_exception=True)
+@group_required('MEMBER')
 @crumb(u'Réunions statutaires')
 def list(r):
 
   table = MeetingTable(Meeting.objects.all().order_by('-num'))
-  if r.user.has_perm('cms.BOARD'):
+  if is_board(r.user):
     table = MgmtMeetingTable(Meeting.objects.all().order_by('-num'))
 
   RequestConfig(r, paginate={"per_page": 75}).configure(table)
@@ -55,21 +54,16 @@ def list(r):
 
 # add #
 #######
-@permission_required('cms.BOARD',raise_exception=True)
+@group_required('BOARD')
 @crumb(u'Ajoute une réunion',parent=list)
 def add(r):
 
   if r.POST:
-    e_template =  settings.TEMPLATE_CONTENT['meetings']['add']['done']['email']['template']
-    done_message = ''
 
     mf = MeetingForm(r.POST,r.FILES)
     if mf.is_valid():
       Mt = mf.save(commit=False)
       Mt.save()
-      
-      user_member = Member.objects.get(user=r.user)
-      e_subject = settings.TEMPLATE_CONTENT['meetings']['add']['done']['email']['subject'] % { 'title': unicode(Mt.title) }
 
       if r.FILES:
         I = Invitation(meeting=Mt,message=mf.cleaned_data['additional_message'],attachement=r.FILES['attachement'])
@@ -81,7 +75,7 @@ def add(r):
       I.save()
       return TemplateResponse(r, settings.TEMPLATE_CONTENT['meetings']['add']['done']['template'], {
                 'title': settings.TEMPLATE_CONTENT['meetings']['add']['done']['title'], 
-                'message': settings.TEMPLATE_CONTENT['meetings']['add']['done']['message'] % { 'email': done_message, 'attachement': I.attachement, 'list': ' ; '.join([gen_member_fullname(m) for m in get_active_members()]), },
+                'message': settings.TEMPLATE_CONTENT['meetings']['add']['done']['message'].format(meeting=Mt,invite=I,list=' ; '.join([gen_member_fullname(m) for m in get_active_members()])),
                 })
 
     # form not valid -> error
@@ -97,9 +91,10 @@ def add(r):
     try:
       latest = Meeting.objects.values().latest('num')
       next_num = latest['num'] + 1
-      form = MeetingForm(initial={ 'title': str(next_num) + '. réunion statutaire', 'num': next_num, })
     except Meeting.DoesNotExist:
-      pass
+      next_num = 1
+
+    form = MeetingForm(initial={ 'title': str(next_num) + '. réunion statutaire', 'num': next_num, })
     return TemplateResponse(r, settings.TEMPLATE_CONTENT['meetings']['add']['template'], {
                 'title': settings.TEMPLATE_CONTENT['meetings']['add']['title'],
                 'desc': settings.TEMPLATE_CONTENT['meetings']['add']['desc'],
@@ -110,7 +105,7 @@ def add(r):
 
 # send #
 ########
-@permission_required('cms.BOARD',raise_exception=True)
+@group_required('BOARD')
 @crumb(u'Envoie des invitations de la réunion : {meeting}'.format(meeting=name_from_pk(Meeting)),parent=list)
 def send(r, meeting_num):
 
@@ -163,7 +158,6 @@ def send(r, meeting_num):
 
 # invite #
 ##########
-#@permission_required('cms.MEMBER',raise_exception=True)
 @crumb(u'Inviter un externe à la réunion : {meeting}'.format(meeting=name_from_pk(Meeting)),parent=list)
 def invite(r, meeting_num, member_id):
 
@@ -248,7 +242,7 @@ def invite(r, meeting_num, member_id):
 
 # details #
 ############
-@login_required
+@group_required('MEMBER')
 @crumb(u'Détails de la réunion : {meeting}'.format(meeting=name_from_pk(Meeting)),parent=list)
 def details(r, meeting_num):
 
@@ -264,7 +258,7 @@ def details(r, meeting_num):
 
 # listing #
 ###########
-@login_required
+@group_required('MEMBER')
 @crumb(u'Listing pour la réunion : {meeting}'.format(meeting=name_from_pk(Meeting)),parent=details)
 def listing(r, meeting_num):
 
@@ -280,7 +274,7 @@ def listing(r, meeting_num):
 
 # modify #
 ##########
-@permission_required('cms.BOARD',raise_exception=True)
+@group_required('BOARD')
 @crumb(u'Modifier la réunion : {meeting}'.format(meeting=name_from_pk(Meeting)),parent=list)
 def modify(r,meeting_num):
 
@@ -302,14 +296,14 @@ def modify(r,meeting_num):
       Mt.save()
 
       # all fine -> done
-      return render(r, done_template, {
+      return TemplateResponse(r, done_template, {
                 'title'		: done_title,
                 'message'     	: done_message,
                 })
 
     # form not valid -> error
     else:
-      return render(r, done_template, {
+      return TemplateResponse(r, done_template, {
                 'title'		: done_title,
                 'error_message'	: settings.TEMPLATE_CONTENT['error']['gen'] + ' ; '.join([e for e in mf.errors]),
                 })
@@ -319,7 +313,7 @@ def modify(r,meeting_num):
     form = ModifyMeetingForm()
     form.initial = gen_meeting_initial(Mt)
     form.instance = Mt
-    return render(r, template, {
+    return TemplateResponse(r, template, {
                 'title'       	: title,
                 'desc'        	: desc,
                 'submit'	: submit,
@@ -329,7 +323,7 @@ def modify(r,meeting_num):
 
 # report #
 ##########
-@permission_required('cms.BOARD',raise_exception=True)
+@group_required('BOARD')
 @crumb(u'Rapport de réunion : {meeting}'.format(meeting=name_from_pk(Meeting)),parent=list)
 def report(r, meeting_num):
 

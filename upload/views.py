@@ -1,5 +1,4 @@
-from django.shortcuts import render
-from django.contrib.auth.decorators import login_required, permission_required
+from django.template.response import TemplateResponse
 from django.conf import settings
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import User
@@ -11,13 +10,15 @@ from django_tables2  import RequestConfig
 from headcrumbs.decorators import crumb
 from headcrumbs.util import name_from_pk
 
+from cms.functions import group_required
+
 from .functions import import_data
 from .forms import ImportData
 
 
 # upload #
 ##########
-@permission_required('cms.BOARD')
+@group_required('BOARD')
 @crumb(u'Import')
 def upload(r,ty):
 
@@ -39,18 +40,18 @@ def upload(r,ty):
 
       if ok == False:
         # issue with import -> error
-        return render(r, done_template, {
+        return TemplateResponse(r, done_template, {
                                'error_message'  : settings.TEMPLATE_CONTENT['error']['import'] + ' ' + str(ok),
                     })
       else:
         # all fine -> done
-        return render(r, done_template, {
+        return TemplateResponse(r, done_template, {
                                'title'    : done_title.format(ok),
                     })
 
     else:
       # form not valid -> error
-      return render(r, done_template, {
+      return TemplateResponse(r, done_template, {
                                'title'          : done_title,
                                'error_message'  : settings.TEMPLATE_CONTENT['error']['gen'] + ' ; '.join([e for e in idf.errors]),
                   })
@@ -58,7 +59,7 @@ def upload(r,ty):
   else:
     # no post yet -> empty form
     form = ImportData()
-    return render(r, template, {
+    return TemplateResponse(r, template, {
                              'title'    : title,
                              'desc'     : desc,
                              'submit'   : submit,

@@ -8,6 +8,8 @@ from unicodedata import normalize
 
 from django.conf import settings
 from django.template.loader import render_to_string
+from django.contrib.auth.decorators import user_passes_test
+from django.core.exceptions import PermissionDenied
 from django.utils import timezone
 
 ###############################
@@ -17,6 +19,27 @@ def debug(app,message):
   if settings.DEBUG:
     from sys import stderr as errlog
     print >>errlog, 'DEBUG ['+unicode(app)+']: '+unicode(message)
+
+
+def check_if_setup():
+  from django.contrib.sites.models import Site
+
+  sid = settings.SITE_ID
+  S = Site.objects.get(pk=sid)
+  if S.domain in settings.ALLOWED_HOSTS: return True
+  return False
+
+def group_required(*group_names):
+
+  """Requires user membership in at least one of the groups passed in."""
+  def in_groups(user):
+    if user.is_authenticated():
+      if bool(user.groups.filter(name__in=group_names)) or user.is_superuser:
+        return True
+      else:
+        raise PermissionDenied
+
+  return user_passes_test(in_groups)
 
 def attach_to_email(email,attachment):
   from os import path

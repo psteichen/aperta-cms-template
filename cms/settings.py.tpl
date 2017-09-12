@@ -6,15 +6,14 @@ from .core_settings import *
 ## (LOCAL) SETTINGS ##
 ######################
 
-SECRET_KEY = '[GENERATE SECRET KEY]'
+SECRET_KEY=[YOUR PRIVATE KEY HERE]
 DEBUG = True
 
-DOMAIN = 'example.org'
-ALLOWED_HOSTS = [ 'your-host.'+DOMAIN, ]
+ALLOWED_HOST=["YOUR HOST HERE"]
 
 # Email settings
-SERVER_EMAIL = 'admin@'+DOMAIN
-DEFAULT_FROM_EMAIL = 'board@'+DOMAIN
+SERVER_EMAIL = 'admin@aperta.lu'
+DEFAULT_FROM_EMAIL = "'FIFTY-ONE Aperta' <board@aperta.lu>"
 
 ADMINS = (
   ('Admin', SERVER_EMAIL),
@@ -23,7 +22,7 @@ MANAGERS = ADMINS
 
 EMAILS = {
   'sender' : {
-    'default'	: '"FIFTY-ONE Aperta" <board@'+DOMAIN+'>',
+    'default'	: DEFAULT_FROM_EMAIL,
   },
   'footer' 	: '''Amicalement,
 Le comité APERTA
@@ -36,10 +35,10 @@ TEMPLATE_CONTENT = {
   'meta' : {
     'author'            : 'Pascal Steichen - pst@libre.lu',
     'copyright'         : 'FIFTY-ONE Luxembourg APERTA a.s.b.l.',
-    'title'             : 'Club Management System',
+    'title'             : 'FIFTY-ONE APERTA - Club Management System (CMS)', 
     'logo' : {
       'title'		: 'FIFTY-ONE<br/><strong><em>APERTA</em></strong>',
-      'img'		: 'https://'+DOMAIN+'/pics/logo-51-aperta_picto.png',
+      'img'		: 'https://aperta.lu/pics/logo-51-aperta_picto.png',
       'url'             : '/',
     },
     'description'       : '',
@@ -79,60 +78,76 @@ TEMPLATE_CONTENT = {
     'duplicate'         : u'Doublon, vérifiez votre saisie!',
   },
   'auth' : {
-    'title': u'Authentification',
-    'submit': u'Se connecter',
-    'chgpwd' : {
-      'title': u'Changer le mot de passe pour: ',
-      'submit': u'Changer',
-      'done' : {
-        'title': u'Changement du mot de passe réussi.',
-        'message': u'Ton mot de passe a été changé avec succès. Merci de te reconnecter avec le nouveau mot de passe.',
-        'backurl': '/',
-        'backurl_txt': u'Retour vers l\'applicaion.',
+    'login' : {
+      'title'		: u'Authentification',
+      'submit'		: u'Se connecter',
+      'next'		: '/',
+      'lost_password'	: u'Mot de passe perdu ?',
+    },
+    'password' : {
+      'change' : {
+        'title'		: u'Changer le mot de passe pour: ',
+        'submit'	: u'Changer',
+        'done' : {
+          'title'	: u'Changement du mot de passe réussi.',
+          'message'	: u'Ton mot de passe a été changé avec succès. Merci de te reconnecter avec le nouveau mot de passe.',
+          'backurl'	: '/',
+          'backurl_txt'	: u'Retour vers l\'applicaion.',
+        },
+      },
+      'reset' : {
+        'title'		: u'Réinitialisation de mot de passe.',
+        'desc'		: u"Pour réinitialiser ton mot de passe, veuillez fournir une adresse email pour l'envoi du lien de réinitialisation, merci.",
+        'submit'	: u'Réinitialiser',
+        'invalid_link'	: u"Ce lien pour réinitialiser votre mot de passe n'est plus valide. Veuillez recommencer la procédure.",
+        'done' : {
+          'title'	: u'Changement du mot de passe réussi.',
+          'message'	: u'Ton mot de passe a été changé avec succès. Merci de te reconnecter avec le nouveau mot de passe.',
+        },
       },
     },
   },
 }
 #add env badge
-try:
-  TEMPLATE_CONTENT['meta']['badge'] = APP_ENV
-except:
-  pass
+TEMPLATE_CONTENT['meta']['badge'] = 'DEV'
 
 # home
 ACTIONS = (
   {
-    'has_perms' 	: 'cms.MEMBER',
     'heading' 		: 'Association',
     'grade' 		: 'success',
     'icon' 		: 'users',
+    'has_perms' 	: 'MEMBER',
     'actions' : (
       {         
         'label'         : u'Réunions Statutaires', 
         'icon'     	: 'calendar',
+        'grade' 	: 'success',
         'desc'          : 'Outil de gestion des réunions statutaires.',
         'url'           : '/meetings/',
-    	'has_perms' 	: 'cms.MEMBER',
+    	'has_perms' 	: 'MEMBER',
       },
       {         
         'label'         : u'Membres', 
         'icon'     	: 'user',
+        'grade' 	: 'success',
         'desc'          : 'Gérer les members et leurs affiliations.',
         'url'           : '/members/',
-    	'has_perms' 	: 'cms.MEMBER',
+    	'has_perms' 	: 'MEMBER',
       },
       {         
         'label'         : u'Trésorerie', 
         'icon'     	: 'euro',
+        'grade' 	: 'success',
         'desc'          : 'Gérer les comptes et autres aspects financiers.',
         'url'           : '/finance/',
-   	'has_perms' 	: 'cms.MEMBER',
+   	'has_perms' 	: 'MEMBER',
      },
 
     ),
   },
   {
-    'has_perms' 	: 'cms.MEMBER',
+    'has_perms' 	: 'MEMBER',
     'heading' 		: 'Activités',
     'grade' 		: 'info',
     'icon' 		: 'globe',
@@ -140,23 +155,27 @@ ACTIONS = (
       { 
         'label'         : 'Évènements', 
         'icon'     	: 'glass',
+        'grade' 	: 'info',
         'desc'          : 'Gérer les actvitiés et évènements (hors réunions statutaires).',
         'url'           : '/events/',
-    	'has_perms' 	: 'cms.MEMBER',
+    	'has_perms' 	: 'MEMBER',
       },
       { 
         'label'        	: u'Lieux de Rencontres', 
         'icon'     	: 'home',
+        'grade' 	: 'info',
         'desc'         	: u'Gérer (ajouter/modifier) les lieux de rencontre.', 
         'url'          	: '/locations/', 
-        'has_perms'    	: 'cms.MEMBER',
+        'has_perms'    	: 'MEMBER',
       },
       {         
 	'label'		: 'DISTRICT', 
 	'icon'		: 'building',
+	'grade'		: 'primary',
 	'desc'		: 'Redirection vers le site du DISTRICT 104.',
 	'url'		: 'https://d104.fifty-one.club/',
-	'has_perms'	: 'cms.MEMBER',
+	'target'	: '_blank',
+	'has_perms'	: 'MEMBER',
       },
     ),
   },
@@ -165,6 +184,12 @@ ACTIONS = (
 TEMPLATE_CONTENT['home'] = {
   'template'    : 'actions.html',
   'actions'     : ACTIONS,
+  'setup_alert' : {
+    'title'	: u'Système non-configuré',
+    'desc'	: u"Pour que le système 'club management system' (CMS) soit utilisable et corresponde à vos besoins propres, veuillez suivre le lien et les instructions ci-dessous pour faire la configuration initiale du système.",
+    'url'	: '/setup/',
+    'action'	: 'Configurateur',
+  },
 }
 
 #setup

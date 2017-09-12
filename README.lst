@@ -28,4 +28,6 @@ Quick start
 6. Start the development server and visit http://127.0.0.1:8000/
    to import data for the different apps (see "docs" for full details).
 
-(7. Deploy django app on your webserver, for a good start see: https://docs.djangoproject.com/en/1.11/howto/deployment/wsgi/)
+7. Got to "setup" app to configure the system to your needs : http://127.0.0.1:8000/setup/
+
+( 8. Deploy django app on your webserver, for a good start see: https://docs.djangoproject.com/en/1.11/howto/deployment/wsgi/ )

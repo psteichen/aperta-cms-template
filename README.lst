@@ -25,13 +25,15 @@ Quick start
 
 3bis. Manually install "headcrumbs" via https://github.com/psteichen/django-headcrumbs (there's no pypi install script yet)
 
-4. Run `python manage.py migrate` to create the models.
+4. Run `python manage.py secret_key` to generate a secret key, that you then need to copy/paste into your new settings file.
 
-5. Run `python manage.py createsuperuser` to get a superuser
+5. Run `python manage.py migrate` to create the models.
 
-6. Start the development server and visit http://127.0.0.1:8000/
+6. Run `python manage.py createsuperuser` to get a superuser
+
+7. Start the development server and visit http://127.0.0.1:8000/
    to import data for the different apps (see "docs" for full details).
 
-7. Got to "setup" app to configure the system to your needs : http://127.0.0.1:8000/setup/
+8. Got to "setup" app to configure the system to your needs : http://127.0.0.1:8000/setup/
 
-( 8. Deploy django app on your webserver, for a good start see: https://docs.djangoproject.com/en/1.11/howto/deployment/wsgi/ )
+( 9. Deploy django app on your webserver, for a good start see: https://docs.djangoproject.com/en/1.11/howto/deployment/wsgi/ )

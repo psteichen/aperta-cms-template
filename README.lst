@@ -27,7 +27,10 @@ Quick start
 
 4. Run `python manage.py secret_key` to generate a secret key, that you then need to copy/paste into your new settings file.
 
-5. Run `python manage.py migrate` to create the models.
+5. To create the DB, run:
+
+    python manage.py makemigrations
+    python manage.py migrate
 
 6. Run `python manage.py createsuperuser` to get a superuser
 

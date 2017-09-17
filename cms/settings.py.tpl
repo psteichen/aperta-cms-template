@@ -6,7 +6,7 @@ from .core_settings import *
 ## (LOCAL) SETTINGS ##
 ######################
 
-SECRET_KEY=[YOUR PRIVATE KEY HERE]
+SECRET_KEY="[YOUR PRIVATE KEY HERE]"
 DEBUG = True
 
 ALLOWED_HOST=["YOUR HOST HERE"]

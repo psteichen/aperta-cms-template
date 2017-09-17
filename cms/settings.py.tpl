@@ -111,7 +111,7 @@ TEMPLATE_CONTENT = {
   },
 }
 #add env badge
-#TEMPLATE_CONTENT['meta']['badge'] = 'DEV'
+TEMPLATE_CONTENT['meta']['badge'] = 'DEV'
 
 # home
 ACTIONS = (

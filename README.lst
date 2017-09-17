@@ -39,4 +39,8 @@ Quick start
 
 8. Got to "setup" app to configure the system to your needs : http://127.0.0.1:8000/setup/
 
-( 9. Deploy django app on your webserver, for a good start see: https://docs.djangoproject.com/en/1.11/howto/deployment/wsgi/ )
+9. Deploy django app on your webserver:
+    
+    cp cms/wsgi.tpl cms/wsgi.py (and adjust to your server config)
+    
+  then follow: https://docs.djangoproject.com/en/1.11/howto/deployment/wsgi/ )

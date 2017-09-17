@@ -29,6 +29,8 @@ Le comité APERTA
 ''',
 }
 
+MEDIA_ROOT = '/var/www/aperta.lu/cms/media/'
+
 #content for templates and views
 TEMPLATE_CONTENT = {
   #basic/generic content for all templates/views:
@@ -109,7 +111,7 @@ TEMPLATE_CONTENT = {
   },
 }
 #add env badge
-TEMPLATE_CONTENT['meta']['badge'] = 'DEV'
+#TEMPLATE_CONTENT['meta']['badge'] = 'DEV'
 
 # home
 ACTIONS = (

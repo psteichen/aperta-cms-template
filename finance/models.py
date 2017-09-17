@@ -34,7 +34,6 @@ class Payment(Model):
   def __unicode__(self):
     return ''
 
-
 def rename_be_scan(i, f):
   fn = rmf('bank', f, unicode(i))
 
@@ -57,7 +56,7 @@ def rename_bs_scan(i, f):
   return fn['name'] + fn['ext']
 
 class BalanceSheet(Model):
-  year		= CharField(verbose_name='Année',max_length=4)
+  year		= CharField(verbose_name='Année',max_length=15)
   date        	= DateField(verbose_name='état du')
   scan        	= FileField(verbose_name='Document',upload_to=rename_bs_scan)
 

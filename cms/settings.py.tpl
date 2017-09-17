@@ -6,10 +6,10 @@ from .core_settings import *
 ## (LOCAL) SETTINGS ##
 ######################
 
-SECRET_KEY="[YOUR PRIVATE KEY HERE]"
+SECRET_KEY="{{ secret_key }}"
 DEBUG = True
 
-ALLOWED_HOST=["YOUR HOST HERE"]
+ALLOWED_HOSTS=["YOUR HOST HERE"]
 
 # Email settings
 SERVER_EMAIL = 'admin@aperta.lu'

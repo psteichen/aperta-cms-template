@@ -25,6 +25,23 @@ ACTIONS = {
       'has_perms'     	: 'BOARD',
     },
   ),
+  'details': (
+    {
+      'label'         	: u"Inscrire un membre",
+      'icon'     	: 'plus',
+      'grade'     	: 'success',
+      'url'           	: '/meetings/register/{}/yes/',
+      'has_perms'     	: 'BOARD',
+    },
+    {
+      'label'         	: u"Désinscrire un membre",
+      'icon'     	: 'minus',
+      'grade'     	: 'danger',
+      'url'           	: '/meetings/register/{}/no/',
+      'has_perms'     	: 'BOARD',
+    },
+
+  ),
 }
 
 MEETINGS_TMPL_CONTENT = {
@@ -114,6 +131,7 @@ Destinataires:
   'details': {
     'template'  	: 'done.html',
     'title'     	: u'Détail de la %(meeting)s',
+    'actions'     	: ACTIONS['details'],
     'overview' : {
       'template'	: 'overview_meeting.html',
       'modify'		: u'Modifier',
@@ -127,6 +145,26 @@ Destinataires:
       'excused'		: u'Excusé(s)',
     },
   },
+  'register' : {
+    'template'  	: 'form.html',
+    'title' : {           	
+      'yes'		: u'Inscrire un membre à la {meeting}',
+      'no'		: u'Désinscrire un membre à la {meeting}',
+    },
+    'grade' : {           	
+      'yes'		: 'success',
+      'no'		: 'danger',
+    },
+    'submit'            : u'Enregistrer',
+    'done' : {
+      'template'        : 'done.html',
+      'message' : {
+        'yes'		: u'{member} a été inscrit(e) à la {meeting}',
+        'no'		: u'{member} est excusé(e) pour la {meeting}',
+      }
+    },
+  },
+
   'report': {
     'template'		: 'form.html',
     'title'         	: u'Compte rendu de la Réunion Statutaire n° {0}',

@@ -12,7 +12,7 @@ from formtools.wizard.views import SessionWizardView
 from django_tables2  import RequestConfig
 
 from headcrumbs.decorators import crumb
-from headcrumbs.util import name_from_pk
+from headcrumbs.util import name_from_pk, kwargs_id, args_id
 
 from cms.functions import notify_by_email, show_form, visualiseDateTime, genIcal, group_required
 
@@ -24,7 +24,7 @@ from attendance.models import Meeting_Attendance
 
 from .functions import gen_meeting_overview, gen_meeting_initial, gen_current_attendance, gen_report_message, gen_invitee_message, gen_meeting_listing
 from .models import Meeting, Invitation
-from .forms import  MeetingForm, ModifyMeetingForm, MeetingReportForm, InviteeFormSet
+from .forms import  MeetingForm, ModifyMeetingForm, MeetingReportForm, InviteeFormSet, RegForm
 from .tables  import MeetingTable, MgmtMeetingTable, MeetingMixin, MeetingListingTable
 
 
@@ -112,7 +112,12 @@ def send(r, meeting_num):
   e_template =  settings.TEMPLATE_CONTENT['meetings']['send']['done']['email']['template']
 
   Mt = Meeting.objects.get(num=meeting_num)
-  I = Invitation.objects.get(meeting=Mt)
+  I = None
+  try:
+    I = Invitation.objects.get(meeting=Mt)
+  except Invitation.DoesNotExist:
+    I = Invitation(meeting=Mt)
+    I.save()
 
   title = settings.TEMPLATE_CONTENT['meetings']['send']['done']['title'] % unicode(Mt.title)
       
@@ -123,7 +128,7 @@ def send(r, meeting_num):
     invitation_message = gen_invitation_message(e_template,Mt,Event.MEET,m)
     message_content = {
         'FULLNAME'    : gen_member_fullname(m),
-        'MESSAGE'     : invitation_message + I.message,
+        'MESSAGE'     : invitation_message + str(I.message),
     }
 
     #generate ical invite
@@ -243,23 +248,92 @@ def invite(r, meeting_num, member_id):
 # details #
 ############
 @group_required('MEMBER')
-@crumb(u'Détails de la réunion : {meeting}'.format(meeting=name_from_pk(Meeting)),parent=list)
+@crumb(u'Inscription à la {meeting}'.format(meeting=name_from_pk(Meeting)),parent=list)
 def details(r, meeting_num):
 
   meeting = Meeting.objects.get(num=meeting_num)
   title = settings.TEMPLATE_CONTENT['meetings']['details']['title'] % { 'meeting' : meeting.title, }
   message = gen_meeting_overview(settings.TEMPLATE_CONTENT['meetings']['details']['overview']['template'],meeting)
+  actions = settings.TEMPLATE_CONTENT['meetings']['details']['actions']
+  for a in actions:
+      a['url'] = a['url'].format(meeting_num)
 
   return TemplateResponse(r, settings.TEMPLATE_CONTENT['meetings']['details']['template'], {
-                   'title': title,
-                   'message': message,
+                   'title'	: title,
+                   'actions'	: actions,
+                   'message'	: message,
                 })
+
+
+# register #
+############
+@group_required('BOARD')
+@crumb(u'Inscription à la {meeting}'.format(meeting=name_from_pk(Meeting)), parent=list)
+#@crumb(u'Inscription à la {meeting}'.format(meeting=name_from_pk(Meeting)), parent=details, parent_kwargs=kwargs_id)
+def register(r, meeting_num, mode):
+
+  Mt = Meeting.objects.get(pk=meeting_num)
+  OK = False
+  if mode == "yes": OK = True
+  if mode == "no": OK = False
+
+  template	= settings.TEMPLATE_CONTENT['meetings']['register']['template']
+  submit	= settings.TEMPLATE_CONTENT['meetings']['register']['submit']
+  done_template	= settings.TEMPLATE_CONTENT['meetings']['register']['done']['template']
+  title = grade = message = None
+  if OK:
+    title	= settings.TEMPLATE_CONTENT['meetings']['register']['title']['yes'].format(meeting=unicode(Mt))
+    grade	= settings.TEMPLATE_CONTENT['meetings']['register']['grade']['yes']
+  else:
+    title	= settings.TEMPLATE_CONTENT['meetings']['register']['title']['no'].format(meeting=unicode(Mt))
+    grade	= settings.TEMPLATE_CONTENT['meetings']['register']['grade']['no']
+  
+
+  if r.POST:
+    e_template =  settings.TEMPLATE_CONTENT['meetings']['invite']['done']['email']['template']
+
+    rf = RegForm(r.POST)
+    if rf.is_valid():
+      M = rf.cleaned_data['member']
+
+      try:
+        A = Meeting_Attendance.objects.get(meeting=Mt,member=M)
+      except:
+        A = Meeting_Attendance(meeting=Mt,member=M)
+
+      A.present = OK
+      A.timestamp = timezone.now()
+      A.save()
+  
+      if OK: message 	= settings.TEMPLATE_CONTENT['meetings']['register']['done']['message']['yes'].format(meeting=unicode(Mt), member=unicode(M))
+      else:  message 	= settings.TEMPLATE_CONTENT['meetings']['register']['done']['message']['no'].format(meeting=unicode(Mt) ,member=unicode(M))
+
+      # all fine -> done
+      return TemplateResponse(r, done_template, {
+                'message'	: message,
+                })
+
+    # form not valid -> error
+    else:
+      return TemplateResponse(r, done_template, {
+                'error_message': settings.TEMPLATE_CONTENT['error']['gen'] + ' ; '.join([str(e) for e in rf.errors]),
+                })
+
+  # no post yet -> empty form
+  else:
+    return TemplateResponse(r, template, {
+                'title'		: title, 
+                'grade'		: grade, 
+                'submit'	: submit,
+                'form'		: RegForm(),
+                })
+
 
 
 # listing #
 ###########
 @group_required('MEMBER')
-@crumb(u'Listing pour la réunion : {meeting}'.format(meeting=name_from_pk(Meeting)),parent=details)
+#@crumb(u'Listing pour la réunion : {meeting}'.format(meeting=name_from_pk(Meeting)),parent=details)
 def listing(r, meeting_num):
 
   meeting = Meeting.objects.get(num=meeting_num)

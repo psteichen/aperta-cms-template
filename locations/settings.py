@@ -8,7 +8,7 @@ ACTIONS = {
       'icon'     	: 'plus',
       'grade'     	: 'danger',
       'url'           	: '/locations/add/', 
-      'has_perms'     	: 'cms.COMM',
+      'has_perms'     	: 'BOARD',
     },
   ),
 }
@@ -29,21 +29,24 @@ LOCATIONS_TMPL_CONTENT = {
     },
   },
   'modify' : {
-    'title'         	: 'Modifier un Lieu de Rencontres',
-    'desc'          	: 'Modifier un lieu de rencontre et le contact y associé.',
-    'first'           	: 'début',
-    'prev'            	: 'retour',
-    'location' : {
-      'title'         	: u'Modifier un Lieu de Rencontres',
-      'next'          	: 'suite',
-    },
-    'contact' : {
-      'title'         	: u'Modifier le Contact',
-      'next'          	: 'soumettre',
-    },
+    'template'		: 'form.html',
+    'title'         	: 'Modifier "%(location)s"',
+    'desc'          	: 'Modifier les détails d\'un lieu de rencontre.',
+    'submit'           	: 'Soumettre',
     'done' : {
-      'template'      	: 'done.html',
-      'title'         	: u'Lieu de Rencontres [%s] a été modifié!',
+      'template'       	: 'done.html',
+      'title'         	: u'Le Lieu de Rencontres "%(location)s" a été modifié.',
+      'message'       	: u'',
+    },
+  },
+  'contact' : {
+    'add' : {
+      'title'         	: u'',
+      'submit'         	: 'soumettre',
+      'done' : {
+        'template'     	: 'done.html',
+        'title'        	: u'',
+      },
     },
   },
 }

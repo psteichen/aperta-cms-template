@@ -7,6 +7,7 @@ from django.template.response import TemplateResponse
 from django.shortcuts import redirect
 from django.contrib.auth.hashers import make_password
 from django.core.files.storage import FileSystemStorage
+from django.contrib.auth.models import Group
 
 from formtools.wizard.views import SessionWizardView
 
@@ -22,7 +23,7 @@ from events.models import Event
 from attendance.functions import gen_attendance_hashes
 
 from .functions import is_board, is_member, create_user, gen_member_initial, gen_role_initial, gen_member_overview, gen_member_fullname, gen_username, gen_random_password
-from .models import User, Member, Role
+from .models import User, Member, Role, RoleType
 from .forms import MemberForm, RoleForm, RoleTypeForm
 from .tables  import MemberTable, MgmtMemberTable, RoleTable
 
@@ -105,7 +106,7 @@ def modify(r,mem_id):
 
       # all fine -> done
       return TemplateResponse(r, settings.TEMPLATE_CONTENT['members']['modify']['done']['template'], {
-                'title': settings.TEMPLATE_CONTENT['members']['modify']['done']['title'].format(unicode(M)),
+                'title': settings.TEMPLATE_CONTENT['members']['modify']['done']['title'].format(str(M)),
                 })
 
     # form not valid -> error
@@ -142,28 +143,29 @@ def roles(request):
                         })
 
 
-# roles  modify #
-#################
+# roles modify #
+################
 @group_required('BOARD')
 @crumb(u'Modifier le rôle [{role}]'.format(role=name_from_pk(Role)), parent=roles)
 def r_modify(r,role_id):
 
   R = Role.objects.get(pk=role_id)
+
   if r.POST:
-    rf = RoleForm(r.POST,instane=R)
+    rf = RoleForm(r.POST,instance=R)
     if rf.is_valid():
       Rl = rf.save()
       
       # all fine -> done
-      return TemplateResponse(r, settings.TEMPLATE_CONTENT['members']['role']['add']['done']['template'], {
-                'title': settings.TEMPLATE_CONTENT['members']['role']['add']['done']['title'], 
-                'message': settings.TEMPLATE_CONTENT['members']['role']['add']['done']['message'] + unicode(Rl),
+      return TemplateResponse(r, settings.TEMPLATE_CONTENT['members']['roles']['modify']['done']['template'], {
+                'title': settings.TEMPLATE_CONTENT['members']['roles']['modify']['done']['title'], 
+                'message': settings.TEMPLATE_CONTENT['members']['roles']['modify']['done']['message'] + str(Rl),
                 })
 
     # form not valid -> error
     else:
-      return TemplateResponse(r, settings.TEMPLATE_CONTENT['members']['role']['add']['done']['template'], {
-                'title': settings.TEMPLATE_CONTENT['members']['role']['add']['done']['title'], 
+      return TemplateResponse(r, settings.TEMPLATE_CONTENT['members']['roles']['modify']['done']['template'], {
+                'title': settings.TEMPLATE_CONTENT['members']['roles']['modify']['done']['title'], 
                 'error_message': settings.TEMPLATE_CONTENT['error']['gen'] + ' ; '.join([e for e in rf.errors]),
                 })
 
@@ -172,10 +174,10 @@ def r_modify(r,role_id):
     form = RoleForm()
     form.initial = gen_role_initial(R)
     form.instance = R
-    return TemplateResponse(r, settings.TEMPLATE_CONTENT['members']['role']['add']['template'], {
-                'title': settings.TEMPLATE_CONTENT['members']['role']['add']['title'],
-                'desc': settings.TEMPLATE_CONTENT['members']['role']['add']['desc'],
-                'submit': settings.TEMPLATE_CONTENT['members']['role']['add']['submit'],
+    return TemplateResponse(r, settings.TEMPLATE_CONTENT['members']['roles']['modify']['template'], {
+                'title': settings.TEMPLATE_CONTENT['members']['roles']['modify']['title'],
+                'desc': settings.TEMPLATE_CONTENT['members']['roles']['modify']['desc'],
+                'submit': settings.TEMPLATE_CONTENT['members']['roles']['modify']['submit'],
                 'form': form,
                 })
 
@@ -190,6 +192,12 @@ def r_add(r):
     if rf.is_valid():
       R = rf.save()
 
+      # add member to group board of role is board too
+      if R.type.type == RoleType.A: 
+        U = R.member.user
+        g = Group.objects.get(name='BOARD') 
+        g.user_set.add(U)
+
       # all fine -> done
       return TemplateResponse(r, settings.TEMPLATE_CONTENT['members']['roles']['add']['done']['template'], {
                 'title': settings.TEMPLATE_CONTENT['members']['roles']['add']['done']['title'],
@@ -204,7 +212,7 @@ def r_add(r):
 
   # no post yet -> empty form
   else:
-    form = RoleForm(initial = { 'year'        : getSaison(), })
+    form = RoleForm(initial = { 'year' : getSaison(), })
     return TemplateResponse(r, settings.TEMPLATE_CONTENT['members']['roles']['add']['template'], {
                 'title': settings.TEMPLATE_CONTENT['members']['roles']['add']['title'],
                 'desc': settings.TEMPLATE_CONTENT['members']['roles']['add']['desc'],

@@ -15,12 +15,11 @@ from .models import Meeting, Invitee
 class MeetingForm(ModelForm):
   additional_message 	= CharField(label='Message supplémentaire',widget=Textarea(attrs={'placeholder': "Message à transmettre dans l'invitation.",}),required=False)
   attachement 		= FileField(label='Annexe(s)',required=False)
-#  send 			= BooleanField(label='Envoi direct des invitations',required=False)
+#  send 		= BooleanField(label='Envoi direct des invitations',required=False)
 
   class Meta:
     model = Meeting
-#    fields = ( 'title', 'when', 'time', 'location', 'num', 'deadline', 'additional_message', 'attachement', 'send', )
-    fields = ( 'title', 'when', 'time', 'location', 'num', 'deadline', 'additional_message', 'attachement', )
+    fields = ( 'title', 'type', 'when', 'time', 'location', 'num', 'deadline', 'additional_message', 'attachement', )
     widgets = {
 #      'title'	: TextInput(attrs={'readonly': 'readonly', }),
       'when'	: TextInput(attrs={'type': 'date', 'id': 'dpicker', }),
@@ -31,7 +30,6 @@ class MeetingForm(ModelForm):
     help_texts = {
       'location': '<a href="/locations/add/" >Ajouter un nouveau lieu de rencontre</a>',
     }
-
 
 
 #invite formset
@@ -55,7 +53,7 @@ class ModifyMeetingForm(ModelForm):
 
   class Meta:
     model = Meeting
-    fields = ( 'title', 'when', 'time', 'location', 'deadline', )
+    fields = ( 'title', 'type', 'when', 'time', 'location', 'deadline', )
     widgets = {
       'when'	: TextInput(attrs={'type': 'date', 'id': 'dpicker', }),
       'time'	: TextInput(attrs={'type': 'time', 'id': 'tpicker', }),

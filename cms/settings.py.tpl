@@ -12,6 +12,12 @@ DEBUG = True
 ALLOWED_HOSTS=["YOUR HOST HERE",]
 
 # Email settings
+ANYMAIL = {
+    "MAILGUN_API_KEY": "YOUR MAILGUN API KEY",
+}
+EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
+EMAIL_SENDER_DOMAIN = "mg.fiftyone.lu"
+
 SERVER_EMAIL = 'admin@aperta.lu'
 DEFAULT_FROM_EMAIL = "'FIFTY-ONE Aperta' <board@aperta.lu>"
 

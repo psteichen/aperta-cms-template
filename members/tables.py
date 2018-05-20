@@ -16,20 +16,9 @@ from attendance.models import Meeting_Attendance
 
 from .models import Member, Role
 
-#table for visualisation via django_tables2
-class MemberTable(Table):
-  role		= Column(verbose_name=u'Rôle',empty_values=())
-  meetings    	= Column(verbose_name=u'RS (présent / excusé)',empty_values=())
 
-  def __init__(self, *args, **kwargs):
-    if kwargs["username"]:
-      self.username = kwargs["username"]
-      kwargs.pop('username',False)
-    super(Table, self).__init__(*args, **kwargs)
-
-  def render_photo(self, value, record):
-    picture = '''<i class="fa-stack fa-3x"><a href="#{id}Modal" data-toggle="modal"><img src="{pic}" alt="Photo" class="img-responsive img-circle" /></a></i>
-
+def view_modal(member,roles):
+  modal = u'''
 <!-- Modal -->
 <div class="modal fade" id="{id}Modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
   <div class="modal-dialog" role="document">
@@ -40,23 +29,59 @@ class MemberTable(Table):
       </div> 
       <div class="modal-body">
         <center><img src="{pic}" alt="Photo" class="img-responsive img-rounded" /></center>
+        <div class="panel">
+          <div class="btn btn-info pull-right">Statut: {status}</div>
+          <div class="panel-body">
+            <strong>Adresse :</strong> <p>{address}</p>
+            <strong>Tél. fixe :</strong> <p>{phone}</p>
+            <strong>Mobile :</strong> <p>{mobile}</p>
+            <em>Rôle(s) : <p>{roles}</p></em>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </div>
-'''.format(id=record.pk,name=unicode(record),pic=settings.MEDIA_URL+unicode(value))
+'''.format(id=member.pk,name=str(member),pic=settings.MEDIA_URL+str(member.photo),status=Member.STATUSES[member.status][1],address=str(member.address),phone=str(member.phone),mobile=str(member.mobile),roles=roles)
+
+  return modal 
+
+
+#table for visualisation via django_tables2
+class MemberTable(Table):
+  role          = Column(verbose_name=u'Rôle(s) ['+getSaison()+'] ',empty_values=())
+  meetings    	= Column(verbose_name=u'RS (présent / excusé)',empty_values=())
+  view		= Column(verbose_name=u'Visualiser',empty_values=())
+
+  def __init__(self, *args, **kwargs):
+    if kwargs["username"]:
+      self.username = kwargs["username"]
+      kwargs.pop('username',False)
+    super(Table, self).__init__(*args, **kwargs)
+
+  def render_photo(self, value, record):
+    roles = u''
+    try:
+      R = Role.objects.filter(member__id=record.id,year=getSaison())
+      for r in R:
+        roles += str(r.type.title)
+        if r != R.last(): roles += u' ; '
+    except Role.DoesNotExist:
+      pass
+
+    picture = u'<i class="fa-stack"><a href="#{id}Modal" data-toggle="modal"><img src="{pic}" alt="Photo" class="img-responsive img-circle" /></a></i>'.format(id=record.pk,pic=settings.MEDIA_URL+str(value)) + view_modal(record,roles)
 
     return mark_safe(picture)
 
   def render_last_name(self, value):
-    return unicode.upper(value)
+    return str.upper(value)
 
   def render_role(self, value, record):
     roles = u''
     try:
       R = Role.objects.filter(member__id=record.id,year=getSaison())
       for r in R:
-        roles += unicode(r.type.title)
+        roles += str(r.type.title)
         if r != R.last(): roles += u' ; '
       return roles
     except Role.DoesNotExist:
@@ -70,10 +95,24 @@ class MemberTable(Table):
       mod = '<a class="btn btn-danger btn-sm pull-right" href="/members/profile/modify/{}/"><i class="fa fa-pencil"></i></a>'.format(escape(record.user))
     return mark_safe(ma + mod)
 
+  def render_view(self, record):
+    roles = u''
+    try:
+      R = Role.objects.filter(member__id=record.id,year=getSaison())
+      for r in R:
+        roles += str(r.type.title)
+        if r != R.last(): roles += u' ; '
+    except Role.DoesNotExist:
+      pass
+
+    link = u'<a class="btn btn-info btn-sm" href="#{id}Modal" data-toggle="modal"><i class="fa fa-eye"></i></a>'.format(id=record.pk) + view_modal(record,roles)
+
+    return mark_safe(link)
+
 
   class Meta:
     model = Member
-    fields = ( 'photo', 'first_name', 'last_name', 'address', 'email', 'mobile', 'status', 'role', 'meetings', )
+    fields = ( 'photo', 'first_name', 'last_name', 'email', 'mobile', 'status', 'role', 'meetings', )
     attrs = {"class": "table table-striped"}
 
 #management table
@@ -81,6 +120,7 @@ class MgmtMemberTable(Table):
   row_class	= Column(visible=False, empty_values=()) #used to highlight some rows
   role          = Column(verbose_name=u'Rôle(s) ['+getSaison()+'] ',empty_values=())
   meetings    	= Column(verbose_name=u'RS (présent / excusé)',empty_values=())
+  view		= Column(verbose_name=u'Visualiser',empty_values=())
   modify	= Column(verbose_name=u'Modifier',empty_values=())
 
   def render_row_class(self, value, record):
@@ -100,48 +140,21 @@ class MgmtMemberTable(Table):
     return cl
 
   def render_photo(self, value, record):
-    role = ''
+    roles = u''
     try:
-      R = Role.objects.get(member__id=record.id)
-      if R.end_date:
-        role = unicode(R.title) + ' (' + unicode(R.start_date) + ' - ' + unicode(R.end_date) +')'
-      else:
-        role = unicode(R.title) + ' (depuis ' + unicode(R.start_date) + ')'
-    except:
+      R = Role.objects.filter(member__id=record.id,year=getSaison())
+      for r in R:
+        roles += str(r.type.title)
+        if r != R.last(): roles += u' ; '
+    except Role.DoesNotExist:
       pass
 
-
-    picture = u'''<i class="fa-stack fa-3x"><a href="#{id}Modal" data-toggle="modal"><img src="{pic}" alt="Photo" class="img-responsive img-circle" /></a></i>
-
-<!-- Modal -->
-<div class="modal fade" id="{id}Modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-        <h4 class="modal-title">{name}</h4>
-      </div> 
-      <div class="modal-body">
-        <center><img src="{pic}" alt="Photo" class="img-responsive img-rounded" /></center>
-        <div class="panel">
-          <div class="btn btn-info pull-right">Statut: {status}</div>
-          <div class="panel-body">
-            <strong>Adresse :</strong> <p>{address}</p>
-            <strong>Tél. fixe :</strong> <p>{phone}</p>
-            <strong>Mobile :</strong> <p>{mobile}</p>
-            <em>Rôle : <p>{role}</p></em>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-'''.format(id=record.pk,name=unicode(record),pic=settings.MEDIA_URL+unicode(value),status=Member.STATUSES[record.status][1],address=unicode(record.address),phone=unicode(record.phone),mobile=unicode(record.mobile),role=role)
+    picture = u'<i class="fa-stack"><a href="#{id}Modal" data-toggle="modal"><img src="{pic}" alt="Photo" class="img-responsive img-circle"/></a></i>'.format(id=record.pk,pic=settings.MEDIA_URL+str(value)) + view_modal(record,roles)
 
     return mark_safe(picture)
 
   def render_last_name(self, value):
-    return unicode.upper(value)
+    return str.upper(value)
 
 #  def render_start_date(self, value):
 #    return format_datetime(value)
@@ -154,7 +167,7 @@ class MgmtMemberTable(Table):
     try:
       R = Role.objects.filter(member__id=record.id,year=getSaison())
       for r in R:
-        roles += unicode(r.type.title)
+        roles += str(r.type.title)
         if r != R.last(): roles += u' ; '
       return roles
     except Role.DoesNotExist:
@@ -164,6 +177,20 @@ class MgmtMemberTable(Table):
     MA = Meeting_Attendance.objects.filter(member=record)
     return '{} / {}'.format(MA.filter(present=True).count(),MA.filter(present=False).count())
 
+  def render_view(self, record):
+    roles = u''
+    try:
+      R = Role.objects.filter(member__id=record.id,year=getSaison())
+      for r in R:
+        roles += str(r.type.title)
+        if r != R.last(): roles += u' ; '
+    except Role.DoesNotExist:
+      pass
+
+    link = u'<a class="btn btn-info btn-sm" href="#{id}Modal" data-toggle="modal"><i class="fa fa-eye"></i></a>'.format(id=record.pk) + view_modal(record,roles)
+
+    return mark_safe(link)
+
   def render_modify(self, record):
     link = '<a class="btn btn-danger btn-sm" href="/members/modify/{}/"><i class="fa fa-pencil"></i></a>'.format(escape(record.pk))
     return mark_safe(link)
@@ -171,7 +198,7 @@ class MgmtMemberTable(Table):
 
   class Meta:
     model = Member
-    fields = ( 'photo', 'first_name', 'last_name', 'address', 'email', 'mobile', 'status', 'role', 'meetings', )
+    fields = ( 'photo', 'first_name', 'last_name', 'email', 'mobile', 'status', 'role', 'meetings', )
     attrs = {"class": "table table-striped"}
 
 #roles table

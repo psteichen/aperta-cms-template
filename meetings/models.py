@@ -14,6 +14,14 @@ def rename_report(i, f):
   return fn['name'] + fn['ext']
 
 class Meeting(Model):
+  S=0
+  C=1
+  TYPES = (
+    (S,u'statutaire'),
+    (C,u'commune / avec conjoint'),
+  )
+
+
   num		= IntegerField(verbose_name='Numéro',primary_key=True)
   title		= CharField(verbose_name='Titre',max_length=100)
   when		= DateField(verbose_name='Date')
@@ -21,16 +29,17 @@ class Meeting(Model):
   location	= ForeignKey(Location,verbose_name='Lieu de Rencontre')
   deadline	= DateTimeField(verbose_name='Deadline')
   report        = FileField(verbose_name='Compte rendu', upload_to=rename_report,blank=True,null=True)
+  type		= IntegerField(choices=TYPES,default=S)
   
-  def __unicode__(self):
-    return unicode(self.title) + u' du ' + unicode(self.when)
+  def __str__(self):
+    return str(self.title) + u' du ' + str(self.when)
 
 
 def rename_attach(i, f):
   fn = rmf('meetings', f, str(i.meeting.num) + '-attachement')
 
   from os import sep
-  return fn['name'] + fn['ext']
+  return str(fn['name']) + str(fn['ext'])
 
 
 class Invitation(Model):
@@ -39,11 +48,11 @@ class Invitation(Model):
   attachement   = FileField(verbose_name='Annexe(s)', upload_to=rename_attach,blank=True,null=True)
   sent		= DateTimeField(blank=True,null=True)
 
-  def __unicode__(self):
+  def __str__(self):
     if self.sent:
-      return u'Invitations pour: ' + unicode(self.meeting) + u' envoyées à: ' + self.sent.strftime('%Y-%m-%d %H:%M')
+      return u'Invitations pour: ' + str(self.meeting) + u' envoyées à: ' + self.sent.strftime('%Y-%m-%d %H:%M')
     else:
-      return u'Invitations pour: ' + unicode(self.meeting) + u' non encore envoyées.'
+      return u'Invitations pour: ' + str(self.meeting) + u' non encore envoyées.'
 
 
 class Invitee(Model):
@@ -51,11 +60,13 @@ class Invitee(Model):
   M=1
   C=2
   W=3
+  B=4
   TYPES = (
     (I,u'Invité'),
     (M,u'Membre d\'un autre club'),
     (C,u'Conférencier'),
     (W,u'Would-Be'),
+    (B,u'Conjoint(e)'),
   )
 
   meeting	= ForeignKey(Meeting)
@@ -65,6 +76,6 @@ class Invitee(Model):
   email		= EmailField()
   type		= IntegerField(choices=TYPES,default=I)
   
-  def __unicode__(self):
-    return self.first_name + u' ' + unicode.upper(self.last_name) + u' invité par ' + unicode(self.member) + u' pour la ' + unicode(self.meeting)
+  def __str__(self):
+    return self.first_name + u' ' + str.upper(self.last_name) + u' invité par ' + str(self.member) + u' pour la ' + str(self.meeting)
 

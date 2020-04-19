@@ -1,6 +1,6 @@
 # coding=utf-8
 
-from django.db.models import Model, CharField, DateField, ForeignKey, TimeField, DateTimeField, FileField, EmailField, ManyToManyField
+from django.db.models import Model, CharField, DateField, ForeignKey, TimeField, DateTimeField, FileField, EmailField, ManyToManyField, FloatField
 
 from cms.functions import rmf
 
@@ -20,7 +20,8 @@ class Event(Model):
   time		= TimeField(verbose_name='Heure de début')
   location      = CharField(verbose_name='Lieu',max_length=500)
   deadline	= DateTimeField(verbose_name='Deadline')
-  agenda        = CharField(verbose_name='Agenda',max_length=500)
+  agenda        = CharField(verbose_name='Agenda',max_length=5000)
+  price  	= FloatField(verbose_name='Prix de participation')
   registration  = CharField(verbose_name='Code de régistration',max_length=25)
   
   def __str__(self):
@@ -77,5 +78,5 @@ class Participant(Model):
   def __str__(self):
     affil = ''
     if self.affiliation: affil = ' ['+str(self.affiliation)+']'
-    return str(self.first_name) + ' ' + str(self.last_name) + ' <' + self.email + '>' + affil
+    return str(self.first_name) + ' ' + str(self.last_name) + ' <' + self.email + '>' + affil + ' - ' + self.regcode
 

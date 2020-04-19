@@ -10,6 +10,21 @@ ACTIONS = {
       'url'             : '/events/add/',
       'has_perms'       : 'BOARD',
     },
+    {
+      'label'         	: u'Importer le Calendrier',
+      'icon'          	: 'upload',
+      'grade'         	: 'warning',
+      'url'             : '/upload/calendar/',
+      'has_perms'     	: 'BOARD',
+    },
+    {
+      'label'           : u'Lieux de rencontre',
+      'icon'            : 'home',
+      'grade'           : 'info',
+      'url'             : '/locations/',
+      'has_perms'       : 'BOARD',
+    },
+
   ),
 }
 
@@ -17,6 +32,16 @@ EVENTS_TMPL_CONTENT = {
   'title'       	: u'Évènements',
   'template'    	: 'list.html',
   'actions'     	: ACTIONS['main'],
+  'calendar': {
+    'template'          : 'done.html',
+    'title'             : u'Calendrier des évènements',
+    'actions'     	: ACTIONS['main'],
+    'overview' : {
+      'template'        : 'overview_events-calendar.html',
+      'register'        : u"S'enregistrer",
+      'view'        	: u"S'informer",
+    },
+  },
   'add': {
     'template'		: 'form.html',
     'title'     	: u'Créer un évènement',
@@ -53,7 +78,7 @@ EVENTS_TMPL_CONTENT = {
       'message'         : u'Destinataires : ',
       'email': {
 	'template'	: 'event_invitation.txt',
-	'subject'	: u'[51 aperta] %(title)s',
+	'subject'	: u'%(title)s',
       },
     },
   },
@@ -69,6 +94,7 @@ EVENTS_TMPL_CONTENT = {
       'location'        : u'Lieu',
       'agenda'          : u'Agenda',
       'info'            : u'Informations supplémetaires',
+      'price'        	: u'Prix de la participation',
     },
     'email': {
       'template'        : 'event_registration.txt',
@@ -83,6 +109,7 @@ EVENTS_TMPL_CONTENT = {
         'location'      : u'Lieu',
         'agenda'        : u'Agenda',
         'info'          : u'Informations supplémetaires',
+        'price'        	: u'Prix de la participation',
         'regcode'       : u"Votre code d'accès :",
       },
     },
@@ -106,8 +133,8 @@ EVENTS_TMPL_CONTENT = {
       'date'            : u'Date et heure',
       'location'        : u'Lieu de rencontre',
       'agenda'          : u'Agenda',
-      'invitation'      : u"Texte de l'Invitation",
-      'attachement'     : u'Informations supplémentaires',
+      'price'        	: u'Prix de la participation',
+      'invitation'      : u"Informations supplémentaires",
       'attendance'      : u'Liste des inscrits',
       'registration'    : u"Lien d'inscription",
     },

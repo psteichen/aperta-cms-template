@@ -18,11 +18,13 @@ class Member(Model):
   HON = 1
   WBE = 2
   STB = 3
+  DEL = 4
   STATUSES = (
     (ACT, 'actif'),
     (HON, 'honoraire'),
     (WBE, 'aspirant (wouldbe)'),
     (STB, 'inactif (standby)'),
+    (DEL, 'deleted'),
   )
   LU = 10
   BE = 11
@@ -76,8 +78,4 @@ class Role(Model):
 
   def __str__(self):
     return str(self.type) + ' : ' + str(self.member)
-
-  class Meta:
-    unique_together = ( 'member', 'type', )
-
 

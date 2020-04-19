@@ -6,6 +6,7 @@ from datetime import date, timedelta, datetime
 from django.template.response import TemplateResponse
 from django.conf import settings
 from django.utils import timezone
+from django.db import IntegrityError
 
 from django_tables2  import RequestConfig
 from formtools.wizard.views import SessionWizardView
@@ -18,7 +19,7 @@ from cms.functions import notify_by_email, group_required
 from members.models import Member
 from members.functions import get_active_members, gen_member_fullname, is_board
 
-from .functions import gen_event_overview, gen_event_initial, gen_reg_hash
+from .functions import gen_event_overview, gen_event_initial, gen_reg_hash, gen_events_calendar, gen_reg_code, gen_registration_message
 from .models import Event, Invitation, Distribution
 from .forms import EventForm, ListEventsForm, RegistrationForm
 from .tables  import EventTable, MgmtEventTable
@@ -27,6 +28,25 @@ from .tables  import EventTable, MgmtEventTable
 ################
 # EVENTS VIEWS #
 ################
+
+# calendar #
+############
+@group_required('MEMBER')
+@crumb(u'Calendrier')
+def calendar(r):
+
+#  events = Event.objects.filter(when__gt=timezone.now())
+  events = Event.objects.all()
+
+  title = settings.TEMPLATE_CONTENT['events']['calendar']['title']
+  message = gen_events_calendar(settings.TEMPLATE_CONTENT['events']['calendar']['overview'],events,is_board(r.user))
+
+  return TemplateResponse(r, settings.TEMPLATE_CONTENT['events']['calendar']['template'], {
+                   'title'	: title,
+                   'actions'	: settings.TEMPLATE_CONTENT['events']['calendar']['actions'],
+                   'message'	: message,
+                })
+
 
 # list #
 ########
@@ -119,11 +139,12 @@ def send_invitation(event,m,invitation):
 
   #send email
   try:
-    return notify_by_email(r.user.email,m.email,subject,message_content,False,settings.MEDIA_ROOT + unicode(invitation.attachement))
+    return notify_by_email(None,m.email,subject,message_content,False,settings.MEDIA_ROOT + str(invitation.attachement))
   except:
-    return notify_by_email(r.user.email,m.email,subject,message_content)
+    return notify_by_email(None,m.email,subject,message_content)
 
 @group_required('BOARD')
+@crumb(u'Envoie des invitations',parent=list)
 def send(r,event_id):
 
   Ev = Event.objects.get(id=event_id)
@@ -195,7 +216,7 @@ def register(r, event_hash):
         'MESSAGE'     : e_message,
       }
       #send email
-      ok=notify_by_email(P.email,e_subject,message_content,False)
+      ok=notify_by_email(False,P.email,e_subject,message_content)
       if not ok:
         #error in sending email
         return TemplateResponse(r, settings.TEMPLATE_CONTENT['events']['register']['done']['template'], {

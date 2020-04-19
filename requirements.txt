@@ -6,3 +6,6 @@ django-bootstrap3
 #django-headcrumbs #no pip install script yet
 django-anymail
 icalendar
+html2text
+Markdown
+requests

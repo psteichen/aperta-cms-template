@@ -1,63 +1,109 @@
 import re
-import email
+import sys
+import argparse
 from optparse import make_option
+import mailparser
+import smtplib, email
 
 from django.core.management.base import BaseCommand, CommandError
 from django.core.mail import send_mass_mail, EmailMessage
 from django.db.models import Q
+from django.conf import settings
 
+from cms.functions import notify_by_email, getSaison
 from members.models import Member
 
 class Command(BaseCommand):
-  option_list = BaseCommand.option_list + (
-	make_option('-f', '--from', dest='from',
-            	help='Sender'),
-	make_option('-g', '--group', dest='group',
-            	help='GROUP to send message to', metavar='GROUP'),
-	make_option('-m', '--message', dest='message',
-            	help='Email message to send', metavar='MESSAGE'),
-  	)
+  def add_arguments(self, parser):
+
+    # Positional arguments
+    parser.add_argument('message', nargs='?', type=argparse.FileType('r'), default=sys.stdin)
+
+    # Named (optional) arguments
+    parser.add_argument(
+      '--group', 
+      dest='group',
+      help='GROUP to send message to', 
+      metavar='GROUP',
+    )
 
   def handle(self, *args, **options):
     query = None
-    message = None
-    subject = '[FIFTY-ONE APERTA - ' + str.upper(str(options['group'])) + '] '
+    group = str(options.get('group'))
+    subject = settings.EMAILS['tag'] + ' [' + str.upper(group) + '] '
     emails = ()
 
-    # get members based on requested "group"
-    self.stdout.write('''Groupmail from <'''+str(options['from'])+'''> to group: <'''+str(options['group'])+'''>''')
-
-    if options['group'] == 'members':
-      query = Member.objects.filter(Q(status=Member.ACT) | Q(status=Member.HON) | Q(status=Member.WBE))
-#    elif options['group'] == 'board':
-    elif options['group'] == 'test':
-      query = Member.objects.filter(role__isnull=False)
-    else:
-      query = None
+    # get raw email message
+    message = email.message_from_string(options.get('message').read())
+    mail = mailparser.parse_from_string(options.get('message').read())
 
     # get email parts from raw source
-    raw_message = email.message_from_string(str(options['message']))
-    if raw_message.is_multipart():
-      for payload in raw_message.get_payload():
-        message = payload.get_payload()
-    else:
-        message = raw_message.get_payload()
-    subject += str(raw_message['subject'])
+#    body = message.get_body()
+#    attachments = message.iter_attchments()
+#    body = ''
+#    attachments = []
+#    if message.is_multipart():
+#      for part in message.walk():
+#        if part.get_content_maintype() == 'multipart':
+#          if part.get('Content-Disposition') is None:
+#            filename = part.get_filename()
+#            payload = part.get_payload(decode=True)
+#            attachments.append({'name':filename,'content':payload})
+#          else:
+#            body += part.get_payload()
+#    else:
+#      body = message.part.get_payload()
+
+    sender = str(message['from'])
+    dest = str(message['to'])
+    try:
+      message.replace_header('Reply-To', group+'@'+settings.EMAILS['domain'])
+    except KeyError:
+      message.add_header('Reply-To', group+'@'+settings.EMAILS['domain'])
+
+    subject += str(message['subject']).replace(subject,'')
+    message.replace_header('Subject', subject)
+
+#    self.stdout.write(self.style.NOTICE('''Groupmail from <'''+str(sender)+'''> to group: <'''+str(group)+'''>'''))
+
+    # get members based on requested "group"
+    query = None
+    if group == 'all':
+      query = Member.objects.filter(Q(status=Member.ACT) | Q(status=Member.HON) | Q(status=Member.WBE) | Q(status=Member.STB)) 
+    if group == 'members':
+      query = Member.objects.filter(Q(status=Member.ACT) | Q(status=Member.WBE))
+    if group == 'board':
+      query = Member.objects.filter(role__year=getSaison())
 
     # send(forward) mail to people of selected group
+    server = smtplib.SMTP('localhost')
     if query is not None:
       for m in query:
-        emails += (
-	  (
-          	subject,
-          	message,
-        	options['from'],
-          	[m.email,],
-	  ),
-	)
-        self.stdout.write('Prepared message for <'+unicode(m)+'>')
+        message.replace_header("To", m.email)
+        server.sendmail(sender, m.email, message.as_string())
 
-    send_mass_mail(emails)
-    self.stdout.write('Emails sent!')
+#        notify_by_email(
+#		sender,
+#		m.email,
+#		subject,
+#		body,
+#		False,
+#		attachments,
+#		False
+#        )
+#        emails += (
+#	  (
+#          	subject,
+#          	msg.as_string(),
+#        	sender,
+#          	[m.email,],
+#	  ),
+#	)
+#        self.stdout.write(self.style.NOTICE('Prepared message for <'+str(m)+'>'))
+#        self.stdout.write(self.style.NOTICE('Sending message for <'+str(m)+'>'))
+
+#    send_mass_mail(emails)
+    server.quit()
+#    self.stdout.write(self.style.SUCCESS('Emails sent!'))
 
 

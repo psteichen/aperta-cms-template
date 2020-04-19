@@ -22,7 +22,7 @@ from meetings.models import Meeting
 from events.models import Event
 from attendance.functions import gen_attendance_hashes
 
-from .functions import is_board, is_member, create_user, gen_member_initial, gen_role_initial, gen_member_overview, gen_member_fullname, gen_username, gen_random_password
+from .functions import is_board, is_member, create_user, gen_member_initial, gen_role_initial, gen_member_overview, gen_member_fullname, gen_username, gen_random_password, ML_updates, remove_from_groups, add_to_groups, remove_from_board, update_user, add_to_board, update_board
 from .models import User, Member, Role, RoleType
 from .forms import MemberForm, RoleForm, RoleTypeForm
 from .tables  import MemberTable, MgmtMemberTable, RoleTable
@@ -59,7 +59,7 @@ def add(r):
       M = mf.save(commit=False)
 
       # create user
-      U = create_user(M.first_name,M.last_name, M.email)
+      U = create_user(M.first_name, M.last_name, M.email)
       M.user = U
       M.save()
 
@@ -69,6 +69,9 @@ def add(r):
       for event in Event.objects.all():
         gen_attendance_hashes(event,Event.OTH,M)
       
+      # update ML
+      ML_updates()
+
       # all fine -> done
       return TemplateResponse(r, settings.TEMPLATE_CONTENT['members']['add']['done']['template'], {
                 'title': settings.TEMPLATE_CONTENT['members']['add']['done']['title'], 
@@ -102,7 +105,17 @@ def modify(r,mem_id):
   if r.POST:
     mf = MemberForm(r.POST,r.FILES,instance=M)
     if mf.is_valid():
+      if mf.has_changed():
+        #if status changes to inactive -> remove from groups
+        if 'status' in mf.changed_data: 
+          if mf.cleaned_data['status'] >= Member.STB: remove_from_groups(M)
+          elif mf.cleaned_data['status'] < Member.STB: add_to_groups(M)
+
       M = mf.save()
+      update_user(M)
+
+      # ML updates
+      ML_updates()
 
       # all fine -> done
       return TemplateResponse(r, settings.TEMPLATE_CONTENT['members']['modify']['done']['template'], {
@@ -143,7 +156,7 @@ def roles(request):
                         })
 
 
-# roles modify #
+# role modify #
 ################
 @group_required('BOARD')
 @crumb(u'Modifier le rôle [{role}]'.format(role=name_from_pk(Role)), parent=roles)
@@ -156,6 +169,12 @@ def r_modify(r,role_id):
     if rf.is_valid():
       Rl = rf.save()
       
+      # board members
+      update_board()
+
+      # ML updates
+      ML_updates()
+
       # all fine -> done
       return TemplateResponse(r, settings.TEMPLATE_CONTENT['members']['roles']['modify']['done']['template'], {
                 'title': settings.TEMPLATE_CONTENT['members']['roles']['modify']['done']['title'], 
@@ -181,7 +200,7 @@ def r_modify(r,role_id):
                 'form': form,
                 })
 
-# roles  add #
+# role add #
 ##############
 @group_required('BOARD')
 @crumb(u'Ajouter un rôle', parent=roles)
@@ -192,11 +211,14 @@ def r_add(r):
     if rf.is_valid():
       R = rf.save()
 
-      # add member to group board of role is board too
-      if R.type.type == RoleType.A: 
-        U = R.member.user
-        g = Group.objects.get(name='BOARD') 
-        g.user_set.add(U)
+      # add member to group board if role is of type A AND saison is current
+      if R.type.type == RoleType.A and R.year == getSaison(): add_to_board(R.member)
+
+      # board members
+      update_board()
+
+      # update ML
+      ML_updates()
 
       # all fine -> done
       return TemplateResponse(r, settings.TEMPLATE_CONTENT['members']['roles']['add']['done']['template'], {
@@ -220,7 +242,25 @@ def r_add(r):
                 'form': form,
                 })
 
-# roles  type #
+# role remove #
+################
+@group_required('BOARD')
+@crumb(u'Enlever le rôle [{role}]'.format(role=name_from_pk(Role)), parent=roles)
+def r_remove(r,role_id):
+
+  R = Role.objects.get(pk=role_id)
+  remove_from_board(R.member)
+  R.delete()
+
+  ML_update('board')
+
+  # all fine -> done
+  return TemplateResponse(r, settings.TEMPLATE_CONTENT['members']['roles']['remove']['done']['template'], {
+                'title': settings.TEMPLATE_CONTENT['members']['roles']['remove']['done']['title'].format(str(R)), 
+         })
+
+
+# role_type add #
 #################
 @group_required('BOARD')
 @crumb(u'Créer un type de rôle', parent=roles)
@@ -257,11 +297,13 @@ def r_type(r):
 # profile #
 ###########
 @group_required('MEMBER')
-@crumb(u'Profile utilisateur: {user}'.format(user=name_from_pk(User)))
+@crumb(u'{user}'.format(user=name_from_pk(User)),parent=list)
 def profile(r, username):
 
+  U = None
+  if username: U = User.objects.get(username=username)
   try:
-    member 	= Member.objects.get(user=r.user)
+    member 	= Member.objects.get(user=U)
   except Member.DoesNotExist:
     # non-member user, probably an admin -> redirect to admin console
     return redirect('/admin/')
@@ -304,7 +346,7 @@ def p_modify(r, username):
     else:
       return TemplateResponse(r, settings.TEMPLATE_CONTENT['members']['profile']['modify']['done']['template'], {
                 'title': settings.TEMPLATE_CONTENT['members']['profile']['modify']['done']['title'], 
-                'error_message': settings.TEMPLATE_CONTENT['error']['gen'] + ' ; '.join([e for e in mf.errors]),
+                'error_message': settings.TEMPLATE_CONTENT['error']['gen'],
                 })
   # no post yet -> empty form
   else:

@@ -33,7 +33,7 @@ def gen_meeting_listing(template,meeting):
   ]
 
   #records table (alphabetical order on last_name)
-  members = Member.objects.all().order_by('last_name')
+  members = get_active_members().order_by('last_name')
   content['listing']['members'] = []
   ok = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i class="fa fa-check"></i>&nbsp;'
   nok = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i class="fa fa-times"></i>&nbsp;'
@@ -85,6 +85,8 @@ def gen_meeting_listing(template,meeting):
 def gen_meeting_overview(template,meeting):
   content = { 'overview' : settings.TEMPLATE_CONTENT['meetings']['details']['overview'] }
 
+  from markdown import markdown
+
   content['title'] = meeting.title
   content['modify'] = '/meetings/modify/' + str(meeting.num)
   content['when'] = visualiseDateTime(meeting.when)
@@ -95,6 +97,7 @@ def gen_meeting_overview(template,meeting):
   try:   
     invitation = Invitation.objects.get(meeting=meeting)
     if invitation.attachement: content['attach'] = settings.MEDIA_URL + str(invitation.attachement)
+    content['message'] = markdown(str(invitation.message))
   except: pass
   content['print'] =  '/meetings/print/' + str(meeting.num)
   content['listing'] = gen_meeting_listing(settings.TEMPLATE_CONTENT['meetings']['listing']['content']['template'],meeting)

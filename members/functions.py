@@ -5,13 +5,88 @@ from django.db.models import Q
 from django.contrib.auth.models import User, Group
 from django.contrib.auth.hashers import make_password
 
-from cms.functions import getSaison
+from cms.functions import getSaison, debug
 
 from attendance.models import Meeting_Attendance
 
-from .models import Member, Role
+from .models import Member, Role, RoleType
 
 
+def get_active_members():
+  return Member.objects.filter(Q(status=Member.ACT)|Q(status=Member.WBE)|Q(status=Member.HON)).order_by('last_name')
+
+#
+## gandi.net mailinglist functions
+#
+from requests import request
+GANDI_ML_URL = "https://api.gandi.net/v5/email/forwards/aperta.lu"
+
+def ML_get(name):
+  headers = {'authorization': 'Apikey '+settings.GANDI_API_KEY}
+  response = request("GET", GANDI_ML_URL, headers=headers)
+  data = response.json()
+  for d in data: 
+    if d['source'] == settings.EMAILS['ml'][name]: return d['destinations']
+    
+  return False
+ 
+def ML_create(name,dest):
+  import json
+
+  p = {}
+  p['source'] = settings.EMAILS['ml'][name]
+  p['destinations'] = dest
+
+  debug('members.functions.ML_create','create ML '+settings.EMAILS['ml'][name])
+  debug('members.functions.ML_create','emails: '+str(dest))
+
+  payload = json.dumps(p)
+  headers = {
+	'authorization': 'Apikey '+settings.GANDI_API_KEY,
+	'content-type': "application/json"
+  }
+  debug('members.functions.ML_create','POST url: '+str(GANDI_ML_URL))
+  debug('members.functions.ML_create','POST headers: '+str(headers))
+  debug('members.functions.ML_create','POST paylod as json: '+str(payload))
+  response = request("POST", GANDI_ML_URL, data=payload, headers=headers)
+  debug('members.functions.ML_create','POST (create ML via API): '+str(response))
+
+  return response.status_code
+ 
+def ML_update(name):
+  r = ML_get(name)
+  debug('members.functions.ML_update','get ML ('+settings.EMAILS['ml'][name]+'): '+str(r))
+  emails = list(User.objects.filter(groups__name=str(name)).values_list('email',flat=True))
+  debug('members.functions.ML_update','emails for list: ['+settings.EMAILS['ml'][name]+']: '+str(emails))
+  if emails == []: return False
+  if r == False: return ML_create(name,emails)
+  else: 
+    import json
+    p = {}
+    p['destinations'] = emails
+    debug('members.functions.ML_update','put emails in paylod: '+str(p))
+
+    url = GANDI_ML_URL+"/"+settings.EMAILS['ml'][name]
+    payload = json.dumps(p)
+    debug('members.functions.ML_update','paylod as json: '+str(payload))
+    headers = {
+	'authorization': 'Apikey '+settings.GANDI_API_KEY,
+	'content-type': "application/json"
+    }
+    response = request("PUT", url, data=payload, headers=headers)
+    debug('members.functions.ML_update','PUT (update ML via API): '+str(response))
+
+    return response.text
+
+def ML_updates():
+  r=[]
+  r.append(ML_update('MEMBER'))
+  r.append(ML_update('BOARD'))
+  return r
+
+#
+## user creation and management functions
+#
 def gen_username(fn, ln, pad=0):
   username = ''
   i=0
@@ -39,7 +114,17 @@ def create_user(first_name,last_name,email):
   U.save()
   U.groups.add(Group.objects.get(name='MEMBER'))
 
+  # add to members ML
+  ML_add(settings.EMAILS['ml']['members'],U.email)
+
   return U
+
+def update_user(member):
+  U = member.user
+  U.first_name = member.first_name
+  U.last_name = member.last_name
+  U.email = member.email
+  U.save()
 
 def is_board(user):
   if user.is_superuser: return True
@@ -56,10 +141,6 @@ def is_member(user):
     if g.name == 'MEMBER': return True
 
   return False
-
-
-def get_active_members():
-  return Member.objects.filter(Q(status=Member.ACT)|Q(status=Member.WBE)|Q(status=Member.HON)).order_by('last_name')
 
 def gen_member_fullname(member):
   return str(member.first_name) + u' ' + str.upper(member.last_name)
@@ -150,4 +231,47 @@ def get_meeting_missing_active_members(meeting):
       members.append(m)
 
   return members
+
+          
+def remove_from_board(M):
+  U = M.user
+  g = Group.objects.get(name='BOARD') 
+  g.user_set.remove(U)
+
+def remove_from_groups(M):
+  U = M.user
+  g = Group.objects.get(name='MEMBER') 
+  g.user_set.remove(U)
+  h = Group.objects.get(name='BOARD') 
+  h.user_set.remove(U)
+
+def add_to_board(M):
+  U = M.user
+  g = Group.objects.get(name='BOARD') 
+  g.user_set.add(U)
+
+def update_board():
+  # update board group based on roles
+  board = Group.objects.get(name='BOARD') 
+  users = User.objects.all()
+  for u in users:
+    board.user_set.remove(u)
+    R = Role.objects.filter(member__user=u,year=getSaison())
+    for r in R:
+      if r.type.type == RoleType.A: board.user_set.add(u)
+
+def has_role(M):
+  try:
+    Role.objects.get(member=M)
+    return True
+  except Role.DoesNotExist:
+    return False
+
+def add_to_groups(M):
+  U = M.user
+  g = Group.objects.get(name='MEMBER') 
+  g.user_set.add(U)
+  if has_role(M):
+    h = Group.objects.get(name='BOARD') 
+    h.user_set.add(U)
 

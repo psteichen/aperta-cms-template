@@ -18,7 +18,7 @@ from django.utils import timezone
 def debug(app,message):
   if settings.DEBUG:
     from sys import stderr as errlog
-    print >>errlog, 'DEBUG ['+str(app)+']: '+str(message)
+    print('DEBUG ['+str(app)+']: '+str(message), file=errlog)
 
 
 def check_if_setup():
@@ -61,13 +61,15 @@ def notify_by_email(sender,to,subject,message_content,cc=False,attachment=False,
 
   if not sender: sender = settings.EMAILS['sender']['default']
   email = EmailMultiAlternatives(
-                subject=subject,
+                subject=str(settings.EMAILS['tag']) + " " + str(subject),
                 from_email=sender,
                 to=[to]
           )
-  email.esp_extra = {"sender_domain": settings.EMAIL_SENDER_DOMAIN}
-  message_content['FOOTER'] = settings.EMAILS['footer']
-  email.body = render_to_string(template,message_content)
+#  email.esp_extra = {"sender_domain": settings.EMAIL_SENDER_DOMAIN}
+  if template:
+    message_content['FOOTER'] = settings.EMAILS['footer']
+    email.body = render_to_string(template,message_content)
+  else: email.body = str(message_content)
   if attachment:
     if is_array(attachment):
       for a in attachment: attach_to_email(email,a)
@@ -165,7 +167,7 @@ def visualiseDateTime(dtIn):
   if type(dtIn) is datetime: return dtIn.strftime('%a le ') + dtIn.strftime('%d %b %Y').lstrip('0') + u' à ' + dtIn.strftime('%Hh%M').lstrip('0')
 
 def getSaison():
-  if int(date.today().strftime('%M')) < 8: # we are after August -> new season started
+  if int(date.today().strftime('%m')) < 7: # we are after August -> new season started
     y1 = str(int(date.today().strftime('%Y')) - 1)
   else:
     y1 = date.today().strftime('%Y')

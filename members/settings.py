@@ -47,7 +47,7 @@ ACTIONS = {
       'icon'     	: 'pencil',
       'grade'     	: 'info',
       'url'           	: '/members/profile/modify/{}/',
-      'has_perms'	: 'MEMBER',
+      'has_perms'	: 'BOARD',
     },
   ),
 }
@@ -80,7 +80,7 @@ MEMBERS_TMPL_CONTENT = {
   'profile': {
     'template'  	: 'done.html',
     'actions'     	: ACTIONS['profile'],
-    'title'     	: u'Profile utilisateur',
+    'title'     	: u'Détail membre',
     'overview' : {
       'template'	: 'overview_member.html',
       'photo'		: u'Photo',
@@ -127,6 +127,16 @@ MEMBERS_TMPL_CONTENT = {
         'template'    : 'done.html',
         'title'       : u'Le rôle a été modifié.',
         'message'     : u'Détails : ',
+      },
+    },
+    'remove': {
+      'template'      : 'form.html',
+      'title'         : u'Enlevé un Rôle',
+      'desc'          : '',
+      'submit'        : u'Enregistrer',
+      'done': {
+        'template'    : 'done.html',
+        'title'       : u'Le rôle [{}] a été enlevé.',
       },
     },
     'type': {
